@@ -252,6 +252,8 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 	 */
 	public function execute()
 	{
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan("ExecutionContainer->Execute");
 		$controller = $this->context->getController();
 
 		$controller->countExecution();
@@ -295,9 +297,12 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 		// register the execution filter
 		$filterChain->register($controller->getFilter('execution'), 'agavi_execution_filter');
 
+		$filterScope = $tracer->startActiveSpan('ExecutionContainer->Execute->FilterChain');
 		// process the filter chain
 		$filterChain->execute($this);
-		
+		$filterScope->close();
+		$scope->close();
+		$tracer->flush();
 		return $this->proceed();
 	}
 	
@@ -459,6 +464,8 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 	 */
 	public function runAction()
 	{
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan("ExecutionContainer->RunAction");
 		$viewName = null;
 
 		$controller = $this->context->getController();
@@ -508,7 +515,9 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 				// prevent access to Request::getParameters()
 				$key = $request->toggleLock();
 				try {
+					$execScope = $tracer->startActiveSpan('ExectionContainer->RunAction->Execute Method ' . $executeMethod);
 					$viewName = $actionInstance->$executeMethod($requestData);
+					$execScope->close();
 				} catch(Exception $e) {
 					// we caught an exception... unlock the request and rethrow!
 					$request->toggleLock($key);
@@ -552,7 +561,8 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 			$viewName = AgaviView::NONE;
 			$viewModule = AgaviView::NONE;
 		}
-
+		$scope->close();
+		$tracer->flush();
 		return array($viewModule, $viewName === AgaviView::NONE ? AgaviView::NONE : AgaviToolkit::canonicalName($viewName));
 	}
 	
@@ -567,6 +577,8 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 	 */
 	public function performValidation()
 	{
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan("ExecutionContainer->PerformValidation");
 		$validationManager = $this->getValidationManager();
 
 		// get the current action instance
@@ -590,7 +602,10 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 		}
 
 		// process manual validation
-		return $actionInstance->$validateMethod($requestData) && $validated;
+		$retval = $actionInstance->$validateMethod($requestData) && $validated;
+		$scope->close();
+		$tracer->flush();
+		return $retval;
 	}
 
 	/**

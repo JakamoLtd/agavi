@@ -117,6 +117,8 @@ class AgaviController extends AgaviParameterHolder
 	 */
 	public function createExecutionContainer($moduleName = null, $actionName = null, AgaviRequestDataHolder $arguments = null, $outputType = null, $requestMethod = null)
 	{
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan("Controller->CreateExecutionContainer");
 		// create a new execution container
 		$container = $this->context->createInstanceFor('execution_container');
 		$container->setModuleName($moduleName);
@@ -130,6 +132,8 @@ class AgaviController extends AgaviParameterHolder
 			$requestMethod = $this->context->getRequest()->getMethod();
 		}
 		$container->setRequestMethod($requestMethod);
+		$scope->close();
+		$tracer->flush();
 		return $container;
 	}
 	
@@ -143,6 +147,9 @@ class AgaviController extends AgaviParameterHolder
 	 */
 	public function initializeModule($moduleName)
 	{
+
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan("Controller->InitializeModule");
 		$lowerModuleName = strtolower($moduleName);
 		
 		if(null === AgaviConfig::get('modules.' . $lowerModuleName . '.enabled')) {
@@ -185,6 +192,8 @@ class AgaviController extends AgaviParameterHolder
 		if(is_readable($moduleConfig)) {
 			require_once($moduleConfig);
 		}
+		$scope->close();
+		$tracer->flush();
 	}
 	
 	/**
@@ -204,6 +213,8 @@ class AgaviController extends AgaviParameterHolder
 	public function dispatch(AgaviRequestDataHolder $arguments = null, AgaviExecutionContainer $container = null)
 	{
 		try {
+			$tracer = OpenTracing\GlobalTracer::get();
+			$scope = $tracer->startActiveSpan("Controller->Dispatch");
 			
 			$rq = $this->context->getRequest();
 			$rd = $rq->getRequestData();
@@ -255,8 +266,11 @@ class AgaviController extends AgaviParameterHolder
 				// register the dispatch filter
 				$filterChain->register($this->filters['dispatch'], 'agavi_dispatch_filter');
 				
+				$filterScope = $tracer->startActiveSpan('Controller->FilterChain->Execute');
 				// go, go, go!
 				$filterChain->execute($container);
+				$filterScope->close();
+				$tracer->flush();
 				
 				$response = $container->getResponse();
 			} elseif($container instanceof AgaviResponse) {
@@ -277,6 +291,9 @@ class AgaviController extends AgaviParameterHolder
 			
 		} catch(Exception $e) {
 			AgaviException::render($e, $this->context, $container);
+		} finally {
+			$scope->close();
+			$tracer->flush();
 		}
 	}
 	

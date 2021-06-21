@@ -274,6 +274,8 @@ class AgaviContext
 	 */
 	public static function getInstance($profile = null)
 	{
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan("Context->GetInstance");
 		try {
 			if($profile === null) {
 				$profile = AgaviConfig::get('core.default_context');
@@ -290,6 +292,9 @@ class AgaviContext
 			return self::$instances[$profile];
 		} catch(Exception $e) {
 			AgaviException::render($e);
+		} finally {
+			$scope->close();
+			$tracer->flush();
 		}
 	}
 	
@@ -357,6 +362,10 @@ class AgaviContext
 	 */
 	public function getModel($modelName, $moduleName = null, array $parameters = null)
 	{
+
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan("Context->GetModel");
+
 		$origModelName = $modelName;
 		$modelName = AgaviToolkit::canonicalName($modelName);
 		$class = str_replace('/', '_', $modelName) . 'Model';
@@ -429,7 +438,8 @@ class AgaviContext
 			// pass the constructor params again. dual use for the win
 			$model->initialize($this, (array) $parameters);
 		}
-		
+		$scope->close();
+		$tracer->flush();
 		return $model;
 	}
 

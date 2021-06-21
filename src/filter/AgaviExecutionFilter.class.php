@@ -341,6 +341,9 @@ class AgaviExecutionFilter extends AgaviFilter implements AgaviIActionFilter
 	 */
 	public function execute(AgaviFilterChain $filterChain, AgaviExecutionContainer $container)
 	{
+
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan("ExecutionFilter->Execute");
 		// $lm = $this->context->getLoggerManager();
 
 		// get the context, controller and validator manager
@@ -696,6 +699,8 @@ class AgaviExecutionFilter extends AgaviFilter implements AgaviIActionFilter
 			// we're done here. bai.
 			break;
 		}
+		$scope->close();
+		$tracer->flush();
 	}
 
 	/**
