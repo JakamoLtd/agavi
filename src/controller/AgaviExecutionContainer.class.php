@@ -465,7 +465,6 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 	public function runAction()
 	{
 		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan("ExecutionContainer->RunAction");
 		$viewName = null;
 
 		$controller = $this->context->getController();
@@ -478,6 +477,7 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 		// get the current action information
 		$moduleName = $this->getModuleName();
 		$actionName = $this->getActionName();
+		$scope = $tracer->startActiveSpan("ExecutionContainer->RunAction [$moduleName.$actionName]");
 
 		// get the (already formatted) request method
 		$method = $this->getRequestMethod();
@@ -515,7 +515,7 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 				// prevent access to Request::getParameters()
 				$key = $request->toggleLock();
 				try {
-					$execScope = $tracer->startActiveSpan('ExectionContainer->RunAction->Execute Method ' . $executeMethod);
+					$execScope = $tracer->startActiveSpan('ExectionContainer->RunAction->Execute Method ' . "$moduleName.$actionName" . "->" . $executeMethod);
 					$viewName = $actionInstance->$executeMethod($requestData);
 					$execScope->close();
 				} catch(Exception $e) {
