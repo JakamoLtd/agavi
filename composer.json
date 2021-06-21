@@ -41,6 +41,5 @@
 	},
 	"autoload": {
 		"files": ["src/composerInit.php"]
-	},
-	"bin": ["etc/composer/bin/agavi"]
+	}
 }
