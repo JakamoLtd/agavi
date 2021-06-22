@@ -43,6 +43,8 @@ final class AgaviToolkit
 	 */
 	public static function isPathAbsolute($path)
 	{
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan('Toolkit->IsAbsolutePath');
 		if(strpos($path, "file://") === 0) {
 			$path = substr($path, 7);
 		}
@@ -54,9 +56,12 @@ final class AgaviToolkit
 				($path[2] == '\\' || $path[2] == '/')
 			)
 		) {
+			$scope->close();
+			$tracer->flush();
 			return true;
 		}
-
+		$scope->close();
+		$tracer->flush();
 		return false;
 	}
 
@@ -72,7 +77,11 @@ final class AgaviToolkit
 	 */
 	public static function normalizePath($path)
 	{
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan('Toolkit->NormalizePath');
 		return str_replace('\\', '/', $path);
+		$scope->close();
+		$tracer->flush();
 	}
 
 	/**

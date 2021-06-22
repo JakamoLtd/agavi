@@ -76,6 +76,8 @@ class AgaviConfigCache
 	 */
 	protected static function callHandler($name, $config, $cache, $context, array $handlerInfo = null)
 	{
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan('ConfigCache->CallHandler ' . $name);
 		self::setupHandlers();
 		
 		if(null === $handlerInfo) {
@@ -89,9 +91,10 @@ class AgaviConfigCache
 			$error = sprintf($error, $name);
 			throw new AgaviConfigurationException($error);
 		}
-		
 		$data = self::executeHandler($config, $context, $handlerInfo);
 		self::writeCacheFile($config, $cache, $data, false);
+		$scope->close();
+		$tracer->flush();
 	}
 
 	/**
@@ -174,6 +177,8 @@ class AgaviConfigCache
 	 */
 	protected static function executeHandler($config, $context, array $handlerInfo)
 	{
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan('ConfigCache->ExecuteHandler');
 		// call the handler and retrieve the cache data
 		$handler = new $handlerInfo['class'];
 		if($handler instanceof AgaviIXmlConfigHandler) {
@@ -200,6 +205,8 @@ class AgaviConfigCache
 			$handler->initialize($validationFile, null, $handlerInfo['parameters']);
 			$data = $handler->execute($config, $context);
 		}
+		$scope->close();
+		$tracer->flush();
 		
 		return $data;
 	}
@@ -226,6 +233,9 @@ class AgaviConfigCache
 	 */
 	public static function checkConfig($config, $context = null)
 	{
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan('ConfigCache->checkConfig ' . $config);
+
 		$config = AgaviToolkit::normalizePath($config);
 		// the full filename path to the config, which might not be what we were given.
 		$filename = AgaviToolkit::isPathAbsolute($config) ? $config : AgaviToolkit::normalizePath(AgaviConfig::get('core.app_dir')) . '/' . $config;
@@ -241,6 +251,8 @@ class AgaviConfigCache
 			// configuration file has changed so we need to reparse it
 			self::callHandler($config, $filename, $cache, $context);
 		}
+		$scope->close();
+		$tracer->flush();
 
 		return $cache;
 	}
@@ -504,6 +516,8 @@ class AgaviConfigCache
 	 */
 	public static function writeCacheFile($config, $cache, $data, $append = false)
 	{
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan('ConfigCache->WriteCacheFile');
 		$perms = fileperms(AgaviConfig::get('core.cache_dir')) ^ 0x4000;
 
 		$cacheDir = AgaviConfig::get('core.cache_dir') . DIRECTORY_SEPARATOR . self::CACHE_SUBDIR;
@@ -524,6 +538,8 @@ class AgaviConfigCache
 			if(@rename($tmpName, $cache) || (@copy($tmpName, $cache) && unlink($tmpName))) {
 				// alright, it did work after all. chmod() and bail out.
 				chmod($cache, $perms);
+				$scope->close();
+				$tracer->flush();
 				return;
 			}
 		}
@@ -534,6 +550,8 @@ class AgaviConfigCache
 		$error .= "\n\n";
 		$error .= 'Please make sure you have set correct write permissions for directory "%s".';
 		$error = sprintf($error, $cache, $config, AgaviConfig::get('core.cache_dir'));
+		$scope->close();
+		$tracer->flush();
 		throw new AgaviCacheException($error);
 	}
 
