@@ -94,7 +94,6 @@ class AgaviConfigCache
 		$data = self::executeHandler($config, $context, $handlerInfo);
 		self::writeCacheFile($config, $cache, $data, false);
 		$scope->close();
-		$tracer->flush();
 	}
 
 	/**
@@ -206,7 +205,6 @@ class AgaviConfigCache
 			$data = $handler->execute($config, $context);
 		}
 		$scope->close();
-		$tracer->flush();
 		
 		return $data;
 	}
@@ -244,15 +242,16 @@ class AgaviConfigCache
 			throw new AgaviUnreadableException('Configuration file "' . $filename . '" does not exist or is unreadable.');
 		}
 
+		$cScope = $tracer->startActiveSpan('ConfigCache->checkConfig->getCacheName');
 		// the cache filename we'll be using
 		$cache = self::getCacheName($config, $context);
+		$cScope->close();
 
 		if(self::isModified($filename, $cache)) {
 			// configuration file has changed so we need to reparse it
 			self::callHandler($config, $filename, $cache, $context);
 		}
 		$scope->close();
-		$tracer->flush();
 
 		return $cache;
 	}
@@ -539,7 +538,6 @@ class AgaviConfigCache
 				// alright, it did work after all. chmod() and bail out.
 				chmod($cache, $perms);
 				$scope->close();
-				$tracer->flush();
 				return;
 			}
 		}
@@ -551,7 +549,6 @@ class AgaviConfigCache
 		$error .= 'Please make sure you have set correct write permissions for directory "%s".';
 		$error = sprintf($error, $cache, $config, AgaviConfig::get('core.cache_dir'));
 		$scope->close();
-		$tracer->flush();
 		throw new AgaviCacheException($error);
 	}
 

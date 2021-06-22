@@ -700,7 +700,6 @@ class AgaviExecutionFilter extends AgaviFilter implements AgaviIActionFilter
 			break;
 		}
 		$scope->close();
-		$tracer->flush();
 	}
 
 	/**

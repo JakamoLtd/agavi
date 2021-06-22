@@ -330,7 +330,6 @@ class AgaviContext
 			AgaviException::render($e, $this);
 		} finally {
 			$scope->close();
-			$tracer->flush();
 		}
 		
 		register_shutdown_function(array($this, 'shutdown'));
@@ -444,7 +443,6 @@ class AgaviContext
 			$model->initialize($this, (array) $parameters);
 		}
 		$scope->close();
-		$tracer->flush();
 		return $model;
 	}
 

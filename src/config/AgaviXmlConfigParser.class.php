@@ -337,7 +337,6 @@ class AgaviXmlConfigParser
 		// set the pseudo-document URI
 		$retval->documentURI = $path;
 		$scope->close();
-		$tracer->flush();
 		return $retval;
 	}
 	

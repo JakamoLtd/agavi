@@ -133,7 +133,6 @@ class AgaviController extends AgaviParameterHolder
 		}
 		$container->setRequestMethod($requestMethod);
 		$scope->close();
-		$tracer->flush();
 		return $container;
 	}
 	
@@ -193,7 +192,6 @@ class AgaviController extends AgaviParameterHolder
 			require_once($moduleConfig);
 		}
 		$scope->close();
-		$tracer->flush();
 	}
 	
 	/**
@@ -273,7 +271,6 @@ class AgaviController extends AgaviParameterHolder
 				// go, go, go!
 				$filterChain->execute($container);
 				$filterScope->close();
-				$tracer->flush();
 				
 				$response = $container->getResponse();
 			} elseif($container instanceof AgaviResponse) {
@@ -290,7 +287,6 @@ class AgaviController extends AgaviParameterHolder
 				$response->send();
 			}
 			$scope->close();
-			$tracer->flush();
 			return $response;
 			
 		} catch(Exception $e) {
