@@ -212,10 +212,11 @@ class AgaviController extends AgaviParameterHolder
 	 */
 	public function dispatch(AgaviRequestDataHolder $arguments = null, AgaviExecutionContainer $container = null)
 	{
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan("Controller->Dispatch to " . $container->getModuleName() . "." . $container->getActionName());
+		
 		try {
-			$tracer = OpenTracing\GlobalTracer::get();
-			$scope = $tracer->startActiveSpan("Controller->Dispatch to " . $container->getModuleName() . "." . $container->getActionName());
-			
+
 			$rq = $this->context->getRequest();
 			$rd = $rq->getRequestData();
 			
