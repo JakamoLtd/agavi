@@ -212,9 +212,7 @@ class AgaviController extends AgaviParameterHolder
 	 */
 	public function dispatch(AgaviRequestDataHolder $arguments = null, AgaviExecutionContainer $container = null)
 	{
-		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan("Controller->Dispatch to " . $container->getModuleName() . "." . $container->getActionName());
-		
+
 		try {
 
 			$rq = $this->context->getRequest();
@@ -224,6 +222,10 @@ class AgaviController extends AgaviParameterHolder
 				// match routes and assign returned initial execution container
 				$container = $this->context->getRouting()->execute();
 			}
+
+			$tracer = OpenTracing\GlobalTracer::get();
+			$scope = $tracer->startActiveSpan("Controller->Dispatch to " . $container->getModuleName() . "." . $container->getActionName());
+			
 			
 			if($container instanceof AgaviExecutionContainer) {
 				// merge in any arguments given. they need to have precedence over what the routing found
@@ -287,14 +289,14 @@ class AgaviController extends AgaviParameterHolder
 			if($this->getParameter('send_response')) {
 				$response->send();
 			}
-			
+			$scope->close();
+			$tracer->flush();
 			return $response;
 			
 		} catch(Exception $e) {
 			AgaviException::render($e, $this->context, $container);
 		} finally {
-			$scope->close();
-			$tracer->flush();
+
 		}
 	}
 	
