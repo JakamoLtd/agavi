@@ -322,10 +322,15 @@ class AgaviContext
 	 */
 	public function initialize()
 	{
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveScope('Context->Initialize ' . $this->name . ' (load factories.xml)');
 		try {
 			include(AgaviConfigCache::checkConfig(AgaviConfig::get('core.config_dir') . '/factories.xml', $this->name));
 		} catch(Exception $e) {
 			AgaviException::render($e, $this);
+		} finally {
+			$scope->close();
+			$tracer->flush();
 		}
 		
 		register_shutdown_function(array($this, 'shutdown'));
