@@ -149,7 +149,7 @@ class AgaviController extends AgaviParameterHolder
 	{
 
 		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan("Controller->InitializeModule");
+		$scope = $tracer->startActiveSpan("Controller->InitializeModule $moduleName");
 		$lowerModuleName = strtolower($moduleName);
 		
 		if(null === AgaviConfig::get('modules.' . $lowerModuleName . '.enabled')) {
@@ -214,7 +214,7 @@ class AgaviController extends AgaviParameterHolder
 	{
 		try {
 			$tracer = OpenTracing\GlobalTracer::get();
-			$scope = $tracer->startActiveSpan("Controller->Dispatch");
+			$scope = $tracer->startActiveSpan("Controller->Dispatch to " . $container->getModuleName() . "." . $container->getActionName());
 			
 			$rq = $this->context->getRequest();
 			$rd = $rq->getRequestData();

@@ -515,13 +515,15 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 				// prevent access to Request::getParameters()
 				$key = $request->toggleLock();
 				try {
-					$execScope = $tracer->startActiveSpan('ExectionContainer->RunAction->Execute Method ' . "$moduleName.$actionName" . "->" . $executeMethod);
+					$execScope = $tracer->startActiveSpan('ExectionContainer->RunAction->Execute Method ' . $moduleName . "." . $actionName . "->" . $executeMethod);
 					$viewName = $actionInstance->$executeMethod($requestData);
 					$execScope->close();
 				} catch(Exception $e) {
 					// we caught an exception... unlock the request and rethrow!
 					$request->toggleLock($key);
 					throw $e;
+				} finally {
+					$tracer->flush();
 				}
 				$request->toggleLock($key);
 			} else {
