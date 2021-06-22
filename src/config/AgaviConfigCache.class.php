@@ -1,5 +1,4 @@
-<?php
-
+<?php 
 // +---------------------------------------------------------------------------+
 // | This file is part of the Agavi package.                                   |
 // | Copyright (c) 2005-2011 the Agavi Project.                                |
@@ -298,7 +297,7 @@ class AgaviConfigCache
 		$cacheName = sprintf(
 			'%1$s_%2$s.php',
 			preg_replace(
-				'/[^\w-_.]/i', 
+				'/[^\w_.-]/i', 
 				'_', 
 				sprintf(
 					'%1$s_%2$s_%3$s', 
