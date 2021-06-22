@@ -13,6 +13,8 @@
 // |   End:                                                                    |
 // +---------------------------------------------------------------------------+
 
+use OpenTracing\GlobalTracer;
+
 /**
  * AgaviXmlConfigParser handles both Agavi and foreign XML configuration files,
  * deals with XIncludes, XSL transformations and validation as well as filtering
@@ -213,6 +215,9 @@ class AgaviXmlConfigParser
 	 */
 	public static function run($path, $environment, $context = null, array $transformationInfo = array(), array $validationInfo = array())
 	{
+
+		$tracer = OpenTracing\GlobalTracer::get();
+		$scope = $tracer->startActiveSpan('XmlConfigParser->run ' . $path);
 		$isAgaviConfigFormat = true;
 		// build an array of documents (this one, and the parents)
 		$docs = array();
@@ -331,7 +336,8 @@ class AgaviXmlConfigParser
 		
 		// set the pseudo-document URI
 		$retval->documentURI = $path;
-		
+		$scope->close();
+		$tracer->flush();
 		return $retval;
 	}
 	

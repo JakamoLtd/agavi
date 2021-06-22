@@ -178,7 +178,7 @@ class AgaviConfigCache
 	protected static function executeHandler($config, $context, array $handlerInfo)
 	{
 		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan('ConfigCache->ExecuteHandler');
+		$scope = $tracer->startActiveSpan('ConfigCache->ExecuteHandler ' . $handlerInfo['class']);
 		// call the handler and retrieve the cache data
 		$handler = new $handlerInfo['class'];
 		if($handler instanceof AgaviIXmlConfigHandler) {

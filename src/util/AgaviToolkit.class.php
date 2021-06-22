@@ -44,7 +44,7 @@ final class AgaviToolkit
 	public static function isPathAbsolute($path)
 	{
 		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan('Toolkit->IsAbsolutePath');
+		$scope = $tracer->startActiveSpan('Toolkit->IsAbsolutePath ' . $path);
 		if(strpos($path, "file://") === 0) {
 			$path = substr($path, 7);
 		}
@@ -61,7 +61,6 @@ final class AgaviToolkit
 			return true;
 		}
 		$scope->close();
-		$tracer->flush();
 		return false;
 	}
 
