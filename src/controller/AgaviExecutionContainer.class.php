@@ -477,7 +477,7 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 		// get the current action information
 		$moduleName = $this->getModuleName();
 		$actionName = $this->getActionName();
-		$scope = $tracer->startActiveSpan("ExecutionContainer->RunAction [$moduleName.$actionName]");
+		$scope = $tracer->startActiveSpan("ExecutionContainer->RunAction", ['tags' => ['module' => $moduleName, 'action' => $actionName]]);
 
 		// get the (already formatted) request method
 		$method = $this->getRequestMethod();
@@ -515,16 +515,14 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 				// prevent access to Request::getParameters()
 				$key = $request->toggleLock();
 				try {
-					$execScope = $tracer->startActiveSpan('ExectionContainer->RunAction->Execute Method ' . $moduleName . "." . $actionName . "->" . $executeMethod);
+					$execScope = $tracer->startActiveSpan('ExectionContainer->RunAction->Execute', ['tags' => ['module' => $moduleName, 'action' => $actionName, 'method' => $executeMethod]]);
 					$viewName = $actionInstance->$executeMethod($requestData);
 					$execScope->close();
 				} catch(Exception $e) {
 					// we caught an exception... unlock the request and rethrow!
 					$request->toggleLock($key);
 					throw $e;
-				} finally {
-					$tracer->flush();
-				}
+				} 
 				$request->toggleLock($key);
 			} else {
 				// validation failed

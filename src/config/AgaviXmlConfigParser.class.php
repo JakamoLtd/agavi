@@ -217,7 +217,7 @@ class AgaviXmlConfigParser
 	{
 
 		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan('XmlConfigParser->run ' . $path);
+		$scope = $tracer->startActiveSpan('XmlConfigParser->run', [ 'tags' => ['path' => $path] ]);
 		$isAgaviConfigFormat = true;
 		// build an array of documents (this one, and the parents)
 		$docs = array();

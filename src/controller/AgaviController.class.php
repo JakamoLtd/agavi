@@ -224,7 +224,7 @@ class AgaviController extends AgaviParameterHolder
 			}
 
 			$tracer = OpenTracing\GlobalTracer::get();
-			$scope = $tracer->startActiveSpan("Controller->Dispatch to " . $container->getModuleName() . "." . $container->getActionName());
+			$scope = $tracer->startActiveSpan("Controller->Dispatch", [ 'tags' => ['container' => $container->getModuleName(), 'action' => $container->getActionName()] ] );
 			
 			
 			if($container instanceof AgaviExecutionContainer) {

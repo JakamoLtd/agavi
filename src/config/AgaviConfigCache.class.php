@@ -77,7 +77,7 @@ class AgaviConfigCache
 	protected static function callHandler($name, $config, $cache, $context, array $handlerInfo = null)
 	{
 		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan('ConfigCache->CallHandler ' . $name);
+		$scope = $tracer->startActiveSpan('ConfigCache->CallHandler', [ 'tags' => ['name' => $name] ]);
 		self::setupHandlers();
 		
 		if(null === $handlerInfo) {
@@ -178,7 +178,7 @@ class AgaviConfigCache
 	protected static function executeHandler($config, $context, array $handlerInfo)
 	{
 		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan('ConfigCache->ExecuteHandler ' . $handlerInfo['class']);
+		$scope = $tracer->startActiveSpan('ConfigCache->ExecuteHandler', [ 'tags' => ['handler' => $$handlerInfo['class']] ] );
 		// call the handler and retrieve the cache data
 		$handler = new $handlerInfo['class'];
 		if($handler instanceof AgaviIXmlConfigHandler) {
@@ -234,7 +234,7 @@ class AgaviConfigCache
 	public static function checkConfig($config, $context = null)
 	{
 		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan('ConfigCache->checkConfig ' . $config);
+		$scope = $tracer->startActiveSpan('ConfigCache->checkConfig', [ 'tags' => ['config' => $config] ] );
 
 		$config = AgaviToolkit::normalizePath($config);
 		// the full filename path to the config, which might not be what we were given.
