@@ -294,7 +294,6 @@ class AgaviContext
 			AgaviException::render($e);
 		} finally {
 			$scope->close();
-			$tracer->flush();
 		}
 	}
 	
