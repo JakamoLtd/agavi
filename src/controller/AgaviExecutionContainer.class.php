@@ -252,8 +252,7 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 	 */
 	public function execute()
 	{
-		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan("ExecutionContainer->Execute");
+
 		$controller = $this->context->getController();
 
 		$controller->countExecution();
@@ -297,12 +296,9 @@ class AgaviExecutionContainer extends AgaviAttributeHolder
 		// register the execution filter
 		$filterChain->register($controller->getFilter('execution'), 'agavi_execution_filter');
 
-		$filterScope = $tracer->startActiveSpan('ExecutionContainer->Execute->FilterChain');
 		// process the filter chain
 		$filterChain->execute($this);
-		$filterScope->close();
-		$scope->close();
-		$tracer->flush();
+
 		return $this->proceed();
 	}
 	

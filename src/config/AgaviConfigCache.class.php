@@ -176,8 +176,7 @@ class AgaviConfigCache
 	 */
 	protected static function executeHandler($config, $context, array $handlerInfo)
 	{
-		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan('ConfigCache->ExecuteHandler', [ 'tags' => ['handler' => $handlerInfo['class']] ] );
+
 		// call the handler and retrieve the cache data
 		$handler = new $handlerInfo['class'];
 		if($handler instanceof AgaviIXmlConfigHandler) {
@@ -204,7 +203,6 @@ class AgaviConfigCache
 			$handler->initialize($validationFile, null, $handlerInfo['parameters']);
 			$data = $handler->execute($config, $context);
 		}
-		$scope->close();
 		
 		return $data;
 	}
@@ -231,8 +229,7 @@ class AgaviConfigCache
 	 */
 	public static function checkConfig($config, $context = null)
 	{
-		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan('ConfigCache->checkConfig', [ 'tags' => ['config' => $config] ] );
+
 
 		$config = AgaviToolkit::normalizePath($config);
 		// the full filename path to the config, which might not be what we were given.
@@ -242,16 +239,14 @@ class AgaviConfigCache
 			throw new AgaviUnreadableException('Configuration file "' . $filename . '" does not exist or is unreadable.');
 		}
 
-		$cScope = $tracer->startActiveSpan('ConfigCache->checkConfig->getCacheName');
 		// the cache filename we'll be using
 		$cache = self::getCacheName($config, $context);
-		$cScope->close();
 
 		if(self::isModified($filename, $cache)) {
 			// configuration file has changed so we need to reparse it
 			self::callHandler($config, $filename, $cache, $context);
 		}
-		$scope->close();
+
 
 		return $cache;
 	}
@@ -515,8 +510,6 @@ class AgaviConfigCache
 	 */
 	public static function writeCacheFile($config, $cache, $data, $append = false)
 	{
-		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan('ConfigCache->WriteCacheFile');
 		$perms = fileperms(AgaviConfig::get('core.cache_dir')) ^ 0x4000;
 
 		$cacheDir = AgaviConfig::get('core.cache_dir') . DIRECTORY_SEPARATOR . self::CACHE_SUBDIR;
@@ -537,7 +530,6 @@ class AgaviConfigCache
 			if(@rename($tmpName, $cache) || (@copy($tmpName, $cache) && unlink($tmpName))) {
 				// alright, it did work after all. chmod() and bail out.
 				chmod($cache, $perms);
-				$scope->close();
 				return;
 			}
 		}
@@ -548,7 +540,6 @@ class AgaviConfigCache
 		$error .= "\n\n";
 		$error .= 'Please make sure you have set correct write permissions for directory "%s".';
 		$error = sprintf($error, $cache, $config, AgaviConfig::get('core.cache_dir'));
-		$scope->close();
 		throw new AgaviCacheException($error);
 	}
 

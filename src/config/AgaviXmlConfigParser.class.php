@@ -216,8 +216,6 @@ class AgaviXmlConfigParser
 	public static function run($path, $environment, $context = null, array $transformationInfo = array(), array $validationInfo = array())
 	{
 
-		$tracer = OpenTracing\GlobalTracer::get();
-		$scope = $tracer->startActiveSpan('XmlConfigParser->run', [ 'tags' => ['path' => $path] ]);
 		$isAgaviConfigFormat = true;
 		// build an array of documents (this one, and the parents)
 		$docs = array();
@@ -336,7 +334,6 @@ class AgaviXmlConfigParser
 		
 		// set the pseudo-document URI
 		$retval->documentURI = $path;
-		$scope->close();
 		return $retval;
 	}
 	
