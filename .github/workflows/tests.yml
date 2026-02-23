@@ -15,7 +15,7 @@ jobs:
       matrix:
         # PHPUnit 4.x (the version required by composer.json) needs PHP 7.x.
         # The each() function used internally by PHPUnit 4.x was removed in PHP 8.0.
-        php-version: ['7.4']
+        php-version: ['8.5']
 
     steps:
       - name: Checkout
