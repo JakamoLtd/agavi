@@ -41,5 +41,10 @@
 	"autoload": {
 		"files": ["src/composerInit.php"]
 	},
-	"bin": ["etc/composer/bin/agavi"]
+	"bin": ["etc/composer/bin/agavi"],
+	"config": {
+		"audit": {
+			"block-insecure": false
+		}
+	}
 }
