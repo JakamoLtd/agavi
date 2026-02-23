@@ -1,4 +1,11 @@
 <?php
+
+use Agavi\Config\AgaviConfig;
+use Agavi\Config\AgaviFilterConfigHandler;
+use Agavi\Filter\AgaviIFilter;
+use Agavi\Filter\AgaviFilterChain;
+use Agavi\AgaviContext;
+
 require_once(__DIR__ . '/ConfigHandlerTestBase.php');
 
 class FCHTestFilter1 implements AgaviIFilter
@@ -12,8 +19,8 @@ class FCHTestFilter1 implements AgaviIFilter
 		$this->params = $params;
 	}
 
-	public function executeOnce(AgaviFilterChain $filterChain, AgaviExecutionContainer $container) {}
-	public function execute(AgaviFilterChain $filterChain, AgaviExecutionContainer $container) {}
+	public function executeOnce(AgaviFilterChain $filterChain, $container) {}
+	public function execute(AgaviFilterChain $filterChain, $container) {}
 	public final function getContext() {}
 }
 
@@ -25,7 +32,15 @@ class AgaviFilterConfigHandlerTest extends ConfigHandlerTestBase
 {
 	protected $context;
 
-	public function setUp()
+	protected function getContext()
+	{
+		// Disable translation system for this test suite while translation/i18n rewrite pending
+		AgaviConfig::set('core.use_translation', false, true);
+		$context = AgaviContext::getInstance('test');
+		return $context;
+	}
+
+	public function setUp(): void
 	{
 		$this->context = $this->getContext();
 	}
@@ -38,7 +53,7 @@ class AgaviFilterConfigHandlerTest extends ConfigHandlerTestBase
 		
 		$document = $this->parseConfiguration(
 			AgaviConfig::get('core.config_dir') . '/tests/filters.xml',
-			AgaviConfig::get('core.agavi_dir') . '/config/xsl/filters.xsl'
+			AgaviConfig::get('core.agavi_dir') . '/Config/xsl/filters.xsl'
 		);
 
 		$filters = array();

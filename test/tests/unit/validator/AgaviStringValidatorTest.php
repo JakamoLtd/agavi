@@ -1,6 +1,9 @@
 <?php
 
-require_once(__DIR__ . '/BaseValidatorTest.php');
+use Agavi\Validator\AgaviStringValidator;
+use Agavi\Validator\AgaviValidator;
+
+require_once(__DIR__ . '/BaseValidatorTest.base.php');
 
 class AgaviStringValidatorTest extends BaseValidatorTest
 {
@@ -19,7 +22,7 @@ class AgaviStringValidatorTest extends BaseValidatorTest
 		);
 		$error = '';
 		foreach ($good as &$value) {
-			$this->doTestExecute('AgaviStringValidator', $value, AgaviValidator::SUCCESS);
+			$this->doTestExecute(AgaviStringValidator::class, $value, AgaviValidator::SUCCESS);
 		}
 	}
 
@@ -43,10 +46,10 @@ class AgaviStringValidatorTest extends BaseValidatorTest
 			'max' => $errorMsg = 'Some other error',
 		);
 		foreach ($good as &$value) {
-			$this->doTestExecute('AgaviStringValidator', $value, AgaviValidator::SUCCESS, null, $errors, $parameters);
+			$this->doTestExecute(AgaviStringValidator::class, $value, AgaviValidator::SUCCESS, null, $errors, $parameters);
 		}
 		foreach ($bad as &$value) {
-			$this->doTestExecute('AgaviStringValidator', $value, AgaviValidator::ERROR, $errorMsg, $errors, $parameters);
+			$this->doTestExecute(AgaviStringValidator::class, $value, AgaviValidator::ERROR, $errorMsg, $errors, $parameters);
 		}
 	}
 
@@ -69,10 +72,10 @@ class AgaviStringValidatorTest extends BaseValidatorTest
 			'min' => $errorMsg = 'Some other error',
 		);
 		foreach ($good as &$value) {
-			$this->doTestExecute('AgaviStringValidator', $value, AgaviValidator::SUCCESS, null, $errors, $parameters);
+			$this->doTestExecute(AgaviStringValidator::class, $value, AgaviValidator::SUCCESS, null, $errors, $parameters);
 		}
 		foreach ($bad as &$value) {
-			$this->doTestExecute('AgaviStringValidator', $value, AgaviValidator::ERROR, $errorMsg, $errors, $parameters);
+			$this->doTestExecute(AgaviStringValidator::class, $value, AgaviValidator::ERROR, $errorMsg, $errors, $parameters);
 		}
 	}
 }

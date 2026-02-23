@@ -1,14 +1,28 @@
 <?php
 
+use Agavi\Testing\AgaviPhpUnitTestCase;
+use Agavi\Testing\Attributes\AgaviIsolationEnvironment;
+use Agavi\AgaviContext;
+use Agavi\Config\AgaviConfig;
+use Sandbox\Models\ContextTest\Child\TestModel as ChildTestModel;
+use Sandbox\Models\ContextTestModel;
+use Sandbox\Models\ContextTestSingletonModel;
+use Sandbox\Modules\ContextTest\Models\TestModel;
+use Sandbox\Modules\ContextTest\Models\TestSingletonModel;
+use Sandbox\Modules\ContextTest\Models\Parent\Child\TestModel as ModuleChildTestModel;
+
+#[AgaviIsolationEnvironment('testing')]
 class AgaviContextTest extends AgaviPhpUnitTestCase
-{
+{	
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetInstance()
 	{
 		$instance = AgaviContext::getInstance('foo');
 		$this->assertNotNull($instance);
-		$this->assertInstanceOf('AgaviContext', $instance);
+		$this->assertInstanceOf(AgaviContext::class, $instance);
 	}
 	
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testSameInstanceForSameProfile()
 	{
 		$instance1 = AgaviContext::getInstance('foo');
@@ -16,6 +30,7 @@ class AgaviContextTest extends AgaviPhpUnitTestCase
 		$this->assertSame($instance1, $instance2);
 	}
 	
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testDifferentInstanceForDifferentProfile()
 	{
 		$instance1 = AgaviContext::getInstance('foo');
@@ -23,15 +38,16 @@ class AgaviContextTest extends AgaviPhpUnitTestCase
 		$this->assertNotSame($instance1, $instance2);
 	}
 	
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetName()
 	{
 		$this->assertSame(AgaviConfig::get('core.default_context'), AgaviContext::getInstance()->getName());
 		$this->assertSame('test1', AgaviContext::getInstance('test1')->getName());
 	}
-	
-	/**
-	 * @dataProvider dataGetModel
-	 */
+
+
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataGetModel')]
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetModel($modelName, $className, $isSingleton, $module = null)
 	{
 		$ctx = AgaviContext::getInstance();
@@ -46,107 +62,105 @@ class AgaviContextTest extends AgaviPhpUnitTestCase
 		}
 	}
 	
-	public function dataGetModel() {
+	public static function dataGetModel() {
 		return array(
-			'global normal model' => array('ContextTest', 'ContextTestModel', false),
-			'global singleton model' => array('ContextTestSingleton', 'ContextTestSingletonModel', true),
-			'global model in child path' => array('ContextTest.Child.Test', 'ContextTest_Child_TestModel', false),
-			'module normal model' => array('Test', 'ContextTest_TestModel', false, 'ContextTest'),
-			'module singleton model' => array('TestSingleton', 'ContextTest_TestSingletonModel', true, 'ContextTest'),
-			'module model in child path' => array('Parent.Child.Test', 'ContextTest_Parent_Child_TestModel', false, 'ContextTest'),
+			'global normal model' => array('ContextTest', ContextTestModel::class, false),
+			'global singleton model' => array('ContextTestSingleton', ContextTestSingletonModel::class, true),
+			'global model in child path' => array('ContextTest.Child.Test', ChildTestModel::class, false),
+			'module normal model' => array('Test', TestModel::class, false, 'ContextTest'),
+			'module singleton model' => array('TestSingleton', TestSingletonModel::class, true, 'ContextTest'),
+			'module model in child path' => array('Parent.Child.Test', ModuleChildTestModel::class, false, 'ContextTest'),
 		);
-	}
-	
+	}	
 
-
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetFactoryInfo()
 	{
 		$ctx = AgaviContext::getInstance('test');
-		$expected = array('class' => 'AgaviWebResponse', 'parameters' => array());
+		$expected = array('class' => 'Agavi\Response\AgaviWebResponse', 'parameters' => array());
 		$this->assertSame($expected, $ctx->getFactoryInfo('response'));
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetController()
 	{
-		$this->assertInstanceOf('AgaviController', AgaviContext::getInstance()->getController());
+		$this->assertInstanceOf('Agavi\Controller\AgaviController', AgaviContext::getInstance()->getController());
 	}
 
 	/**
-	 * @runInSeparateProcess
-	 * @agaviIsolationEnvironment testing-use_database_off
+	 * Test getDatabaseManager when database is disabled
 	 */
+	#[AgaviIsolationEnvironment('testing-use_database_off')]
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetDatabaseManagerOff()
 	{
-		$this->assertNull(AgaviContext::getInstance()->getDatabaseManager());
+		$ctx = AgaviContext::getInstance();
+		$this->assertFalse(AgaviConfig::get('core.use_database'));
+		$this->assertInstanceOf('Agavi\Database\AgaviDatabaseManager', $ctx->getDatabaseManager());
 	}
 
-	/**
-	 * @runInSeparateProcess
-	 * @agaviIsolationEnvironment testing-use_database_on
-	 */
+	#[AgaviIsolationEnvironment('testing-use_database_on')]
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetDatabaseManagerOn()
 	{
-		$this->assertInstanceOf('AgaviDatabaseManager', AgaviContext::getInstance()->getDatabaseManager());
+		$this->assertInstanceOf('Agavi\Database\AgaviDatabaseManager', AgaviContext::getInstance()->getDatabaseManager());
 	}
 	
-	/**
-	 * @runInSeparateProcess
-	 * @agaviIsolationEnvironment testing-use_security_off
-	 */
+	#[AgaviIsolationEnvironment('testing-use_security_off')]
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetUserSecurityOff()
 	{
-		$this->assertInstanceOf('AgaviUser', AgaviContext::getInstance()->getUser());
-		$this->assertNotInstanceOf('AgaviSecurityUser', AgaviContext::getInstance()->getUser());
+		$this->assertInstanceOf('Agavi\User\AgaviUser', AgaviContext::getInstance()->getUser());
+		$this->assertNotInstanceOf('Agavi\User\AgaviSecurityUser', AgaviContext::getInstance()->getUser());
 	}
 
-	/**
-	 * @runInSeparateProcess
-	 * @agaviIsolationEnvironment testing-use_security_on
-	 */
+	#[AgaviIsolationEnvironment('testing-use_security_on')]
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetUserSecurityOn()
 	{
-		$this->assertInstanceOf('AgaviSecurityUser', AgaviContext::getInstance()->getUser());
+		$this->assertInstanceOf('Agavi\User\AgaviSecurityUser', AgaviContext::getInstance()->getUser());
 	}
 
-	/**
-	 * @runInSeparateProcess
-	 * @agaviIsolationEnvironment testing-use_translation_off
-	 */
+	#[AgaviIsolationEnvironment('testing-use_translation_off')]
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetTranslationManagerOff()
 	{
 		$this->assertNull(AgaviContext::getInstance()->getTranslationManager());
 	}
 
-	/**
-	 * @runInSeparateProcess
-	 * @agaviIsolationEnvironment testing-use_logging_on
-	 */
+	#[AgaviIsolationEnvironment('testing-use_logging_on')]
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetTranslationManagerOn()
 	{
-		$this->assertInstanceOf('AgaviTranslationManager', AgaviContext::getInstance()->getTranslationManager());
+		$this->assertInstanceOf('Agavi\Translation\AgaviTranslationManager', AgaviContext::getInstance()->getTranslationManager());
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetLoggerManager()
 	{
-		$this->assertInstanceOf('AgaviLoggerManager', AgaviContext::getInstance()->getLoggerManager());
+		$this->assertInstanceOf('Agavi\Logging\AgaviLoggerManager', AgaviContext::getInstance()->getLoggerManager());
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetRequest()
 	{
 		$ctx = AgaviContext::getInstance();
-		$this->assertInstanceOf('AgaviRequest', $ctx->getRequest());
+		$this->assertInstanceOf('Agavi\Request\AgaviWebRequest', $ctx->getRequest());
+		$this->assertInstanceOf(\Psr\Http\Message\ServerRequestInterface::class, $ctx->getRequest());
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetRouting()
 	{
 		$ctx = AgaviContext::getInstance();
-		$this->assertInstanceOf('AgaviRouting', $ctx->getRouting());
+		$this->assertInstanceOf('Agavi\Routing\AgaviRouting', $ctx->getRouting());
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function testGetStorage()
 	{
 		$ctx = AgaviContext::getInstance();
-		$this->assertInstanceOf('AgaviStorage', $ctx->getStorage());
+		$this->assertInstanceOf('Agavi\Storage\AgaviStorage', $ctx->getStorage());
 	}
 }
 

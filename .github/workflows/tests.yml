@@ -13,8 +13,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # PHPUnit 4.x (the version required by composer.json) needs PHP 7.x.
-        # The each() function used internally by PHPUnit 4.x was removed in PHP 8.0.
         php-version: ['8.5']
 
     steps:
@@ -25,11 +23,11 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: dom, pcre, reflection, session, spl, tokenizer, xsl
+          extensions: dom, intl, pcre, reflection, session, spl, tokenizer, xsl
           coverage: none
 
       - name: Install dependencies
-        run: composer install --no-interaction --ignore-platform-reqs
+        run: composer install --no-interaction --prefer-dist
 
       - name: Run PHPUnit
-        run: php test/run-tests.php -c test/config/phpunit.xml
+        run: php vendor/bin/phpunit -c test/config/phpunit.xml

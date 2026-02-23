@@ -57,22 +57,6 @@ class AgaviConfigCache
 	protected static $filesIncluded = false;
 
 	/**
-	 * @var        array Memoization cache for getCacheName() results.
-	 *                   Key is "$config|$context".
-	 */
-	protected static $cacheNames = array();
-
-	/**
-	 * @var        array In-memory cache of already-verified config file paths.
-	 *                   Key is "$config|$context", value is the cache file path.
-	 *                   Avoids repeated filemtime() syscalls in long-running
-	 *                   processes such as FrankenPHP worker mode.
-	 *                   Call AgaviConfigCache::clear() to invalidate when config
-	 *                   files are modified at runtime (e.g. during development).
-	 */
-	protected static $checkedConfigCache = array();
-
-	/**
 	 * Load a configuration handler.
 	 *
 	 * @param      string The path of the originally requested configuration file.
@@ -251,15 +235,6 @@ class AgaviConfigCache
 			throw new AgaviUnreadableException('Configuration file "' . $filename . '" does not exist or is unreadable.');
 		}
 
-		// Return early if we have already verified this config in the current process.
-		// This eliminates repeated filemtime() syscalls in long-running processes
-		// such as FrankenPHP worker mode where the same config files are checked on
-		// every request.
-		$cacheKey = $config . '|' . $context;
-		if(isset(self::$checkedConfigCache[$cacheKey])) {
-			return self::$checkedConfigCache[$cacheKey];
-		}
-
 		// the cache filename we'll be using
 		$cache = self::getCacheName($config, $context);
 
@@ -267,8 +242,6 @@ class AgaviConfigCache
 			// configuration file has changed so we need to reparse it
 			self::callHandler($config, $filename, $cache, $context);
 		}
-
-		self::$checkedConfigCache[$cacheKey] = $cache;
 
 		return $cache;
 	}
@@ -298,8 +271,6 @@ class AgaviConfigCache
 	public static function clear()
 	{
 		AgaviToolkit::clearCache(self::CACHE_SUBDIR);
-		self::$cacheNames = array();
-		self::$checkedConfigCache = array();
 	}
 
 	/**
@@ -315,11 +286,6 @@ class AgaviConfigCache
 	 */
 	public static function getCacheName($config, $context = null)
 	{
-		$key = $config . '|' . $context;
-		if(isset(self::$cacheNames[$key])) {
-			return self::$cacheNames[$key];
-		}
-
 		$environment = AgaviConfig::get('core.environment');
 
 		if(strlen($config) > 3 && ctype_alpha($config[0]) && $config[1] == ':' && ($config[2] == '\\' || $config[2] == '/')) {
@@ -351,9 +317,7 @@ class AgaviConfigCache
 			)
 		);
 		
-		$result = AgaviConfig::get('core.cache_dir') . DIRECTORY_SEPARATOR . self::CACHE_SUBDIR . DIRECTORY_SEPARATOR . $cacheName;
-		self::$cacheNames[$key] = $result;
-		return $result;
+		return AgaviConfig::get('core.cache_dir') . DIRECTORY_SEPARATOR . self::CACHE_SUBDIR . DIRECTORY_SEPARATOR . $cacheName;
 	}
 
 	/**

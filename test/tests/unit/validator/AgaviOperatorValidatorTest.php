@@ -1,5 +1,9 @@
 <?php
 
+use Agavi\Testing\AgaviUnitTestCase;
+use Agavi\Validator\AgaviOperatorValidator;
+use Agavi\Validator\AgaviValidator;
+
 class MyOperatorValidator extends AgaviOperatorValidator
 {
 	public $checked = false;
@@ -14,13 +18,13 @@ class AgaviOperatorValidatorTest extends AgaviUnitTestCase
 	private $context;
 	private $vm;
 	
-	public function setUp()
+	public function setUp(): void
 	{
 		$this->context = $this->getContext();
 		$this->vm = $this->context->createInstanceFor('validation_manager');
 	}
 	
-	public function tearDown()
+	public function tearDown(): void
 	{
 		$this->vm = null;
 		$this->context = null;
@@ -62,7 +66,7 @@ class AgaviOperatorValidatorTest extends AgaviUnitTestCase
 	{
 		$v = $this->vm->createValidator('MyOperatorValidator', array());
 		$this->assertFalse($v->checked);
-		$this->assertEquals($v->execute(new AgaviRequestDataHolder()), AgaviValidator::SUCCESS);
+		$this->assertEquals($v->execute($this->newWebRequest()), AgaviValidator::SUCCESS);
 		$this->assertTrue($v->checked);
 	}
 }

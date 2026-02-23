@@ -1,13 +1,27 @@
 <?php
+
+use Agavi\AgaviContext;
+use Agavi\Config\AgaviConfig;
+use Agavi\Config\AgaviValidatorConfigHandler;
+
 require_once(__DIR__ . '/ConfigHandlerTestBase.php');
 
 class AgaviValidatorConfigHandlerTest extends ConfigHandlerTestBase
 {
+
+	protected function getContext()
+	{
+		if (AgaviConfig::get('core.default_context') === null) {
+			AgaviConfig::set('core.default_context', 'web', true, true);
+		}
+		
+		return AgaviContext::getInstance(AgaviConfig::get('core.default_context'));
+	}
 	protected function createValidationManager($environment) {
 		$VCH = new AgaviValidatorConfigHandler();
 		$document = $this->parseConfiguration(
 			AgaviConfig::get('core.config_dir') . '/tests/validators.xml',
-			AgaviConfig::get('core.agavi_dir') . '/config/xsl/validators.xsl',
+			AgaviConfig::get('core.agavi_dir') . '/Config/xsl/validators.xsl',
 			$environment
 		);
 		
@@ -21,6 +35,8 @@ class AgaviValidatorConfigHandlerTest extends ConfigHandlerTestBase
 	
 	public function testTranslationDomainInheritance1_0Behaviour()
 	{
+		// Enable translation for test (new intl-based manager)
+		\Agavi\Config\AgaviConfig::set('core.use_translation', true, true);
 		$vm = $this->createValidationManager('test-translation-domain-1.0-behaviour');
 		
 		$this->assertSame('__NULL__', $vm->getChild('toplevel_simple')->getParameter('translation_domain', '__NULL__'));
@@ -33,6 +49,7 @@ class AgaviValidatorConfigHandlerTest extends ConfigHandlerTestBase
 	
 	public function testTranslationDomainInheritance()
 	{
+		\Agavi\Config\AgaviConfig::set('core.use_translation', true, true);
 		$vm = $this->createValidationManager('test-translation-domain');
 		
 		$this->assertSame('test-domain-toplevel', $vm->getChild('toplevel_simple')->getParameter('translation_domain'));
@@ -50,6 +67,7 @@ class AgaviValidatorConfigHandlerTest extends ConfigHandlerTestBase
 	}
 	
 	public function testErrorsDefinedByValidationDefinition() {
+		\Agavi\Config\AgaviConfig::set('core.use_translation', true, true);
 		$vm = $this->createValidationManager('test-validator-definition-error-definition');
 		$this->assertSame(array('' => 'error-generic', 'min' => 'error-min'), $vm->getChild('standalone-empty')->getErrorMessages());
 		$this->assertSame(array('' => 'error-generic-validator1', 'min' => 'error-min'), $vm->getChild('standalone-with-errors-single')->getErrorMessages());

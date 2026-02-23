@@ -41,23 +41,6 @@ abstract class AgaviRouting extends AgaviParameterHolder
 	protected $routes = array();
 
 	/**
-	 * @var        array|null Cached list of top-level route names (no parent).
-	 *                        Populated lazily in execute() and reset in importRoutes().
-	 */
-	protected $rootRoutes = null;
-
-	/**
-	 * @var        array Static in-process cache of deserialized routing config data.
-	 *                   Key is "config_path|context_name", ensuring that routing
-	 *                   configurations for different contexts are stored separately.
-	 *                   Avoids repeated file_get_contents() + unserialize() calls
-	 *                   across requests in long-running processes such as FrankenPHP
-	 *                   worker mode. Call AgaviConfigCache::clear() to invalidate
-	 *                   after routing configuration changes.
-	 */
-	protected static $routesCache = array();
-
-	/**
 	 * @var        AgaviContext An AgaviContext instance.
 	 */
 	protected $context = null;
@@ -147,12 +130,7 @@ abstract class AgaviRouting extends AgaviParameterHolder
 		$cfg = AgaviConfig::get('core.config_dir') . '/routing.xml';
 		// allow missing routing.xml when routing is not enabled
 		if($this->isEnabled() || is_readable($cfg)) {
-			$contextName = $this->context->getName();
-			$cacheKey = $cfg . '|' . $contextName;
-			if(!isset(self::$routesCache[$cacheKey])) {
-				self::$routesCache[$cacheKey] = unserialize(file_get_contents(AgaviConfigCache::checkConfig($cfg, $contextName)));
-			}
-			$this->importRoutes(self::$routesCache[$cacheKey]);
+			$this->importRoutes(unserialize(file_get_contents(AgaviConfigCache::checkConfig($cfg, $this->context->getName()))));
 		}
 	}
 
@@ -424,7 +402,6 @@ abstract class AgaviRouting extends AgaviParameterHolder
 	public function importRoutes(array $routes)
 	{
 		$this->routes = $routes;
-		$this->rootRoutes = null;
 	}
 
 	/**
@@ -1173,18 +1150,16 @@ abstract class AgaviRouting extends AgaviParameterHolder
 		
 		$requestMethod = $rq->getMethod();
 
-		// get all top level routes, using a lazily-populated cache
-		if($this->rootRoutes === null) {
-			$this->rootRoutes = array();
-			foreach($this->routes as $name => $route) {
-				if(!$route['opt']['parent']) {
-					$this->rootRoutes[] = $name;
-				}
+		$routes = array();
+		// get all top level routes
+		foreach($this->routes as $name => $route) {
+			if(!$route['opt']['parent']) {
+				$routes[] = $name;
 			}
 		}
 
 		// prepare the working stack with the root routes
-		$routeStack = array($this->rootRoutes);
+		$routeStack = array($routes);
 
 		do {
 			$routes = array_pop($routeStack);

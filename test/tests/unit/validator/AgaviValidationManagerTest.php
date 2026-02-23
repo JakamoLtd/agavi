@@ -1,5 +1,11 @@
 <?php
 
+use Agavi\Testing\AgaviUnitTestCase;
+use Agavi\Validator\AgaviValidationManager;
+use Agavi\Validator\AgaviDependencyManager;
+use Agavi\Util\AgaviVirtualArrayPath;
+use Agavi\Validator\AgaviValidator;
+
 class MyValidationManager extends AgaviValidationManager
 {
 	public function getChildren() { return $this->children; }
@@ -10,13 +16,13 @@ class AgaviValidationManagerTest extends AgaviUnitTestCase
 	private $_vm = null;
 	private $_context = null;
 	
-	public function setUp()
+	public function setUp(): void
 	{
 		$this->_context = $this->getContext();
 		$this->_vm = $this->_context->createInstanceFor('validation_manager');
 	}
 
-	public function tearDown()
+	public function tearDown(): void
 	{
 		$this->_vm = null;
 		$this->_context = null;
@@ -74,7 +80,7 @@ class AgaviValidationManagerTest extends AgaviUnitTestCase
 		$val1->val_result = true;
 		$val2->val_result = true;
 		
-		$this->assertTrue($this->_vm->execute(new AgaviRequestDataHolder()));
+		$this->assertTrue($this->_vm->execute($this->newWebRequest()));
 		$this->assertTrue($val1->validated);
 		$this->assertTrue($val2->validated);
 		$this->_vm->clear();
@@ -84,7 +90,7 @@ class AgaviValidationManagerTest extends AgaviUnitTestCase
 		$val1->val_result = false;
 		$val1->setParameter('severity', 'none');
 		$this->_vm->registerValidators(array($val1, $val2));
-		$this->assertTrue($this->_vm->execute(new AgaviRequestDataHolder()));
+		$this->assertTrue($this->_vm->execute($this->newWebRequest()));
 		$this->assertTrue($val1->validated);
 		$this->assertTrue($val2->validated);
 		$this->_vm->clear();
@@ -93,7 +99,7 @@ class AgaviValidationManagerTest extends AgaviUnitTestCase
 		
 		$val1->setParameter('severity', 'error');
 		$this->_vm->registerValidators(array($val1, $val2));
-		$this->assertFalse($this->_vm->execute(new AgaviRequestDataHolder()));
+		$this->assertFalse($this->_vm->execute($this->newWebRequest()));
 		$this->assertTrue($val1->validated);
 		$this->assertTrue($val2->validated);
 		$this->_vm->clear();
@@ -102,7 +108,7 @@ class AgaviValidationManagerTest extends AgaviUnitTestCase
 		
 		$val1->setParameter('severity', 'critical');
 		$this->_vm->registerValidators(array($val1, $val2));
-		$this->assertFalse($this->_vm->execute(new AgaviRequestDataHolder()));
+		$this->assertFalse($this->_vm->execute($this->newWebRequest()));
 		$this->assertTrue($val1->validated);
 		$this->assertFalse($val2->validated);
 		$this->_vm->clear();
@@ -142,7 +148,7 @@ class AgaviValidationManagerTest extends AgaviUnitTestCase
 		$vm->initialize($this->_context);
 		$validator = $this->_vm->createValidator('DummyValidator', array(), array(), array('provides' => 'provide-token'));
 		$vm->registerValidators(array($validator));
-		$vm->execute(new AgaviRequestDataHolder());
+		$vm->execute($this->newWebRequest());
 		$this->assertEquals(array('provide-token' => true), $vm->getReport()->getDependTokens());
 	}
 }

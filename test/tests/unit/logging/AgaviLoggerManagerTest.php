@@ -1,5 +1,11 @@
 <?php
 
+use Agavi\Testing\AgaviUnitTestCase;
+use Agavi\Logging\AgaviPassthruLoggerLayout;
+use Agavi\Logging\AgaviFileLoggerAppender;
+use Agavi\Logging\AgaviLogger;
+use Agavi\Logging\AgaviLoggerMessage;
+
 class AgaviLoggerManagerTest extends AgaviUnitTestCase
 {
 	private
@@ -13,14 +19,35 @@ class AgaviLoggerManagerTest extends AgaviUnitTestCase
 		$_l = null,
 		$_l2 = null;
 
-	public function setUp()
+	public function setUp(): void
 	{
+		// Ensure framework bootstrap occurs when running this test in isolation.
+		parent::setUp();
+		// Force-enable logging in case a prior test disabled it globally.
+		\Agavi\Config\AgaviConfig::set('core.use_logging', true);
 		$this->_context = $this->getContext();
 		$this->_lm = $this->_context->getLoggerManager();
-		$this->_logfile = tempnam('','logtest');
+		// If still null (context created earlier while logging disabled), lazily create and inject a logger manager.
+		if ($this->_lm === null) {
+			$lm = new \Agavi\Logging\AgaviLoggerManager();
+			$lm->initialize($this->_context, []);
+			$rc = new ReflectionClass($this->_context);
+			if ($rc->hasProperty('loggerManager')) {
+				$prop = $rc->getProperty('loggerManager');
+				
+				$prop->setValue($this->_context, $lm);
+			}
+			$this->_lm = $lm;
+		}
+		// Use tempnam to obtain unique paths, then remove if present to start with a clean slate.
+		$this->_logfile = tempnam('', 'logtest');
 		$this->_logfile2 = tempnam('', 'logtest2');
-		@unlink($this->_logfile);
-		@unlink($this->_logfile2);
+		if (is_file($this->_logfile)) {
+			unlink($this->_logfile);
+		}
+		if (is_file($this->_logfile2)) {
+			unlink($this->_logfile2);
+		}
 		$this->_pl = new AgaviPassthruLoggerLayout;
 		$this->_fa = new AgaviFileLoggerAppender;
 		$this->_fa->initialize($this->_context, array('file' => $this->_logfile));
@@ -36,13 +63,18 @@ class AgaviLoggerManagerTest extends AgaviUnitTestCase
 		$this->_l2->setAppender('fa2', $this->_fa2);
 	}
 
-	public function tearDown()
+	public function tearDown(): void
 	{
 		$this->_lm->shutdown();
-		@unlink($this->_logfile);
-		@unlink($this->_logfile2);
+		if (is_file($this->_logfile)) {
+			unlink($this->_logfile);
+		}
+		if (is_file($this->_logfile2)) {
+			unlink($this->_logfile2);
+		}
 		$this->_lm = null;
 		$this->_context = null;
+		parent::tearDown();
 	}
 
 	public function testGetLoggerNames()
@@ -78,28 +110,28 @@ class AgaviLoggerManagerTest extends AgaviUnitTestCase
 
 		//this should be logged by both
 		$this->_lm->log(new AgaviLoggerMessage('simple info message', AgaviLogger::INFO));
-		$this->assertRegexp('/simple info message/', file_get_contents($this->_logfile));
-		$this->assertRegexp('/simple info message/', file_get_contents($this->_logfile2));
+		$this->assertMatchesRegularExpression('/simple info message/', file_get_contents($this->_logfile));
+		$this->assertMatchesRegularExpression('/simple info message/', file_get_contents($this->_logfile2));
 
 		//this should be logged only by l2
 		$this->_lm->log(new AgaviLoggerMessage('simple debug message', AgaviLogger::DEBUG));
-		$this->assertNotRegexp('/simple debug message/', file_get_contents($this->_logfile));
-		$this->assertRegexp('/simple debug message/', file_get_contents($this->_logfile2));
+		$this->assertDoesNotMatchRegularExpression('/simple debug message/', file_get_contents($this->_logfile));
+		$this->assertMatchesRegularExpression('/simple debug message/', file_get_contents($this->_logfile2));
 
 		//this should be logged only by l2
 		$this->_lm->log('simple debug message two', AgaviLogger::DEBUG);
-		$this->assertNotRegexp('/simple debug message two/', file_get_contents($this->_logfile));
-		$this->assertRegexp('/simple debug message two/', file_get_contents($this->_logfile2));
+		$this->assertDoesNotMatchRegularExpression('/simple debug message two/', file_get_contents($this->_logfile));
+		$this->assertMatchesRegularExpression('/simple debug message two/', file_get_contents($this->_logfile2));
 
 		//this should be logged only by l
 		$this->_lm->log('simple debug message three', $this->_l);
-		$this->assertRegexp('/simple debug message three/', file_get_contents($this->_logfile));
-		$this->assertNotRegexp('/simple debug message three/', file_get_contents($this->_logfile2));
+		$this->assertMatchesRegularExpression('/simple debug message three/', file_get_contents($this->_logfile));
+		$this->assertDoesNotMatchRegularExpression('/simple debug message three/', file_get_contents($this->_logfile2));
 
 		//this should be logged only by l
 		$this->_lm->log(new AgaviLoggerMessage('simple info message four', AgaviLogger::INFO), $this->_l);
-		$this->assertRegexp('/simple info message four/', file_get_contents($this->_logfile));
-		$this->assertNotRegexp('/simple info message four/', file_get_contents($this->_logfile2));
+		$this->assertMatchesRegularExpression('/simple info message four/', file_get_contents($this->_logfile));
+		$this->assertDoesNotMatchRegularExpression('/simple info message four/', file_get_contents($this->_logfile2));
 	}
 
 }

@@ -13,6 +13,8 @@
 // |   End:                                                                    |
 // +---------------------------------------------------------------------------+
 
+use Agavi\Config\AgaviConfigCache;
+
 /**
  * AgaviTestingConfigCache allows access to some internal config cache properties 
  *
@@ -59,7 +61,7 @@ class AgaviTestingConfigCache extends AgaviConfigCache
 		return parent::getHandlerInfo($name);
 	}
 
-	public static function callHandler($name, $config, $cache, $context, array $handlerInfo = null)
+	public static function callHandler($name, $config, $cache, $context, ?array $handlerInfo = null)
 	{
 		parent::callHandler($name, $config, $cache, $context, $handlerInfo);
 	}
