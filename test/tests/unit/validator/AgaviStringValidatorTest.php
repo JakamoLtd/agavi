@@ -1,12 +1,15 @@
 <?php
 
-require_once(__DIR__ . '/BaseValidatorTest.php');
+use Agavi\Validator\AgaviStringValidator;
+use Agavi\Validator\AgaviValidator;
+
+require_once(__DIR__ . '/BaseValidatorTest.base.php');
 
 class AgaviStringValidatorTest extends BaseValidatorTest
 {
 	public function testExecute()
 	{
-		$good = array(
+		$good = [
 			'1',
 			'1.0',
 			'2222222222',
@@ -16,63 +19,63 @@ class AgaviStringValidatorTest extends BaseValidatorTest
 			'BOB',
 			'1.5B',
 			'%%!@#$%#'
-		);
+		];
 		$error = '';
 		foreach ($good as &$value) {
-			$this->doTestExecute('AgaviStringValidator', $value, AgaviValidator::SUCCESS);
+			$this->doTestExecute(AgaviStringValidator::class, $value, AgaviValidator::SUCCESS);
 		}
 	}
 
 	public function testExecuteMax()
 	{
-		$bad = array(
+		$bad = [
 			'12345',
 			'bbbbbbbb',
 			'12bb34bb56bb  z',
 			'      '
-		);
-		$good = array(
+		];
+		$good = [
 			'3',
 			'3.99',
 			'    '
-		);
-		$parameters = array(
+		];
+		$parameters = [
 			'max' => 4,
-		);
-		$errors = array(
+		];
+		$errors = [
 			'max' => $errorMsg = 'Some other error',
-		);
+		];
 		foreach ($good as &$value) {
-			$this->doTestExecute('AgaviStringValidator', $value, AgaviValidator::SUCCESS, null, $errors, $parameters);
+			$this->doTestExecute(AgaviStringValidator::class, $value, AgaviValidator::SUCCESS, null, $errors, $parameters);
 		}
 		foreach ($bad as &$value) {
-			$this->doTestExecute('AgaviStringValidator', $value, AgaviValidator::ERROR, $errorMsg, $errors, $parameters);
+			$this->doTestExecute(AgaviStringValidator::class, $value, AgaviValidator::ERROR, $errorMsg, $errors, $parameters);
 		}
 	}
 
 	public function testExecuteMin()
 	{
-		$bad = array(
+		$bad = [
 			'5',
 			'4.',
 			'  '
-		);
-		$good = array(
+		];
+		$good = [
 			'333',
 			'3.9',
 			'     '
-		);
-		$parameters = array(
+		];
+		$parameters = [
 			'min' => 3,
-		);
-		$errors = array(
+		];
+		$errors = [
 			'min' => $errorMsg = 'Some other error',
-		);
+		];
 		foreach ($good as &$value) {
-			$this->doTestExecute('AgaviStringValidator', $value, AgaviValidator::SUCCESS, null, $errors, $parameters);
+			$this->doTestExecute(AgaviStringValidator::class, $value, AgaviValidator::SUCCESS, null, $errors, $parameters);
 		}
 		foreach ($bad as &$value) {
-			$this->doTestExecute('AgaviStringValidator', $value, AgaviValidator::ERROR, $errorMsg, $errors, $parameters);
+			$this->doTestExecute(AgaviStringValidator::class, $value, AgaviValidator::ERROR, $errorMsg, $errors, $parameters);
 		}
 	}
 }

@@ -1,13 +1,16 @@
 <?php
 
+use Agavi\Testing\AgaviUnitTestCase;
+use Agavi\Config\AgaviConfigValueHolder;
+
 class AgaviConfigValueHolderTest extends AgaviUnitTestCase
 {
 	public function testInitialState()
 	{
 		$vh = new AgaviConfigValueHolder();
 		$this->assertSame('', $vh->getName());
-		$this->assertSame(array(), $vh->getAttributes());
-		$this->assertSame(array(), $vh->getChildren());
+		$this->assertSame([], $vh->getAttributes());
+		$this->assertSame([], $vh->getChildren());
 		$this->assertNull($vh->getValue());
 	}
 
@@ -130,7 +133,7 @@ class AgaviConfigValueHolderTest extends AgaviUnitTestCase
 		$vh->setAttribute('attr3', 'val3');
 
 		$attr = $vh->getAttributes();
-		$attr_ex = array('attr1' => 'val1', 'attr2' => 'val2', 'attr3' => 'val3');
+		$attr_ex = ['attr1' => 'val1', 'attr2' => 'val2', 'attr3' => 'val3'];
 
 		$this->assertSame($attr_ex, $attr);
 	}

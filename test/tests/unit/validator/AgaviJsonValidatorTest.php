@@ -1,32 +1,35 @@
 <?php
 
-require_once(__DIR__ . '/BaseValidatorTest.php');
+use Agavi\Validator\AgaviJsonValidator;
+use Agavi\Validator\AgaviValidator;
+
+require_once(__DIR__ . '/BaseValidatorTest.base.php');
 
 class AgaviJsonValidatorTest extends BaseValidatorTest
 {
 	public function testExecute()
 	{
-		$this->doTestExecute('AgaviJsonValidator', json_encode(array('foo' => 'bar')), AgaviValidator::SUCCESS);
+		$this->doTestExecute(AgaviJsonValidator::class, json_encode(['foo' => 'bar']), AgaviValidator::SUCCESS);
 		
-		$errors = array(
+		$errors = [
 			'syntax' => $errorMsg = 'Syntax error',
-		);
-		$this->doTestExecute('AgaviJsonValidator', '{', AgaviValidator::ERROR, $errorMsg, $errors);
+		];
+		$this->doTestExecute(AgaviJsonValidator::class, '{', AgaviValidator::ERROR, $errorMsg, $errors);
 	}
 
 	public function testExport()
 	{
-		$value = array('foo' => 'bar');
+		$value = ['foo' => 'bar'];
 
-		$res = $this->executeValidator('AgaviJsonValidator', json_encode($value), array(), array(
+		$res = $this->executeValidator(AgaviJsonValidator::class, json_encode($value), [], [
 			'export' => 'test',
-		));
+		]);
 		$this->assertEquals($res['rd']->getParameter('test'), $value);
 
-		$res = $this->executeValidator('AgaviJsonValidator', json_encode($value), array(), array(
+		$res = $this->executeValidator(AgaviJsonValidator::class, json_encode($value), [], [
 			'export' => 'test',
 			'assoc'  => false,
-		));
+		]);
 		$this->assertEquals($res['rd']->getParameter('test'), (object)$value);
 	}
 }

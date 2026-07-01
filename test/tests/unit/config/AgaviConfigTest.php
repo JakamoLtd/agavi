@@ -1,23 +1,37 @@
 <?php
 
-require_once(__DIR__ . '/../../../../src/config/AgaviConfig.class.php');
+use Agavi\Testing\AgaviPhpUnitTestCase;
+use Agavi\Testing\Attributes\AgaviBootstrap;
+use Agavi\Config\AgaviConfig;
+
+require_once(__DIR__ . '/../../../../src/Config/AgaviConfig.php');
 
 /**
- * @agaviBootstrap off
- * @preserveGlobalState disabled
- * @runTestsInSeparateProcesses
+ * Test class for AgaviConfig with bootstrap disabled
  */
+#[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
+#[\PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses]
+#[AgaviBootstrap(false)]
 class AgaviConfigTest extends AgaviPhpUnitTestCase
 {
+	#[\Override]
+    public function setUp(): void
+	{
+		AgaviConfig::clear();
+	}
+
 	public function testInitiallyEmpty()
 	{
-		$this->assertEquals(array(), AgaviConfig::toArray());
+		$expected = [];
+		// core.agavi_dir is set as readonly when Agavi.php is loaded
+		if (AgaviConfig::has('core.agavi_dir')) {
+			$expected['core.agavi_dir'] = AgaviConfig::get('core.agavi_dir');
+		}
+		$this->assertEquals($expected, AgaviConfig::toArray());
 		$this->assertNull(AgaviConfig::get('something'));
 	}
 
-	/**
-	 * @dataProvider providerGetSet
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerGetSet')]
 	public function testGetSet($key, $value)
 	{
 		$this->assertTrue(AgaviConfig::set($key, $value));
@@ -26,15 +40,15 @@ class AgaviConfigTest extends AgaviPhpUnitTestCase
 		$this->assertFalse(AgaviConfig::isReadonly($key));
 		$this->assertTrue(AgaviConfig::remove($key));
 	}
-	public function providerGetSet()
+	public static function providerGetSet()
 	{
-		return array(
-			'string key'                => array('foobar', 'baz'),
-			'string key with period'    => array('some.thing', 'ohai'),
+		return [
+			'string key'                => ['foobar', 'baz'],
+			'string key with period'    => ['some.thing', 'ohai'],
 			// 'string key with null byte' => array("f\0oo", 'nullbyte'), // can't do this because PHPUnit doesn't do var_export(serialize(...)), so the null byte fucks everything up
-			'integer key'               => array(123, 'qwe'),
-			'octal number key'          => array(0123, 'yay'),
-		);
+			'integer key'               => [123, 'qwe'],
+			'octal number key'          => [0123, 'yay'],
+		];
 	}
 
 	public function testHas()
@@ -46,7 +60,12 @@ class AgaviConfigTest extends AgaviPhpUnitTestCase
 	public function testClear()
 	{
 		AgaviConfig::clear();
-		$this->assertEquals(array(), AgaviConfig::toArray());
+		$expected = [];
+		// core.agavi_dir is set as readonly when Agavi.php is loaded and survives clear()
+		if (AgaviConfig::has('core.agavi_dir')) {
+			$expected['core.agavi_dir'] = AgaviConfig::get('core.agavi_dir');
+		}
+		$this->assertEquals($expected, AgaviConfig::toArray());
 	}
 
 	public function testRemove()
@@ -60,39 +79,59 @@ class AgaviConfigTest extends AgaviPhpUnitTestCase
 
 	public function testFromArray()
 	{
-		$data = array('foo' => 'bar', 'bar' => 'baz');
+		$data = ['foo' => 'bar', 'bar' => 'baz'];
 		AgaviConfig::clear();
 		AgaviConfig::fromArray($data);
-		$this->assertEquals($data, AgaviConfig::toArray());
+		$expected = $data;
+		// core.agavi_dir is set as readonly when Agavi.php is loaded
+		if (AgaviConfig::has('core.agavi_dir')) {
+			$expected['core.agavi_dir'] = AgaviConfig::get('core.agavi_dir');
+		}
+		$this->assertEquals($expected, AgaviConfig::toArray());
 	}
 
 	public function testFromArrayMerges()
 	{
-		$data = array('foo' => 'bar', 'bar' => 'baz');
+		$data = ['foo' => 'bar', 'bar' => 'baz'];
 		AgaviConfig::clear();
 		AgaviConfig::set('baz', 'lol');
 		AgaviConfig::fromArray($data);
-		$this->assertEquals(array('baz' => 'lol') + $data, AgaviConfig::toArray());
+		$expected = ['baz' => 'lol'] + $data;
+		// core.agavi_dir is set as readonly when Agavi.php is loaded
+		if (AgaviConfig::has('core.agavi_dir')) {
+			$expected['core.agavi_dir'] = AgaviConfig::get('core.agavi_dir');
+		}
+		$this->assertEquals($expected, AgaviConfig::toArray());
 	}
 
 	public function testFromArrayMergesAndOverwrites()
 	{
-		$data = array('foo' => 'bar', 'bar' => 'baz', 'baz' => 'qux');
+		$data = ['foo' => 'bar', 'bar' => 'baz', 'baz' => 'qux'];
 		AgaviConfig::clear();
 		AgaviConfig::set('baz', 'lol');
 		AgaviConfig::fromArray($data);
-		$this->assertEquals(array('baz' => 'qux') + $data, AgaviConfig::toArray());
+		$expected = ['baz' => 'qux'] + $data;
+		// core.agavi_dir is set as readonly when Agavi.php is loaded
+		if (AgaviConfig::has('core.agavi_dir')) {
+			$expected['core.agavi_dir'] = AgaviConfig::get('core.agavi_dir');
+		}
+		$this->assertEquals($expected, AgaviConfig::toArray());
 	}
 
 	public function testFromArrayMergesAndReindexes()
 	{
-		$data = array('zomg', 'lol');
+		$data = ['zomg', 'lol'];
 		AgaviConfig::clear();
 		AgaviConfig::set(2, 'yay');
 		AgaviConfig::set(1, 'aha');
 		AgaviConfig::set(0, 'omg', true, true);
 		AgaviConfig::fromArray($data);
-		$this->assertEquals(array(2 => 'yay', 0 => 'omg', 1 => 'lol'), AgaviConfig::toArray());
+		$expected = [2 => 'yay', 0 => 'omg', 1 => 'lol'];
+		// core.agavi_dir is set as readonly when Agavi.php is loaded
+		if (AgaviConfig::has('core.agavi_dir')) {
+			$expected['core.agavi_dir'] = AgaviConfig::get('core.agavi_dir');
+		}
+		$this->assertEquals($expected, AgaviConfig::toArray());
 	}
 
 	public function testHasNullValue()
@@ -153,11 +192,16 @@ class AgaviConfigTest extends AgaviPhpUnitTestCase
 
 	public function testFromArrayMergesButDoesNotOverwriteReadonlies()
 	{
-		$data = array('foo' => 'bar', 'bar' => 'baz', 'baz' => 'qux');
+		$data = ['foo' => 'bar', 'bar' => 'baz', 'baz' => 'qux'];
 		AgaviConfig::clear();
 		AgaviConfig::set('baz', 'lol', true, true);
 		AgaviConfig::fromArray($data);
-		$this->assertEquals(array('baz' => 'lol') + $data, AgaviConfig::toArray());
+		$expected = ['baz' => 'lol'] + $data;
+		// core.agavi_dir is set as readonly when Agavi.php is loaded
+		if (AgaviConfig::has('core.agavi_dir')) {
+			$expected['core.agavi_dir'] = AgaviConfig::get('core.agavi_dir');
+		}
+		$this->assertEquals($expected, AgaviConfig::toArray());
 	}
 
 	public function testReadonlySurvivesRemove()

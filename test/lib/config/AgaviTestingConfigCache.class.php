@@ -13,6 +13,8 @@
 // |   End:                                                                    |
 // +---------------------------------------------------------------------------+
 
+use Agavi\Config\AgaviConfigCache;
+
 /**
  * AgaviTestingConfigCache allows access to some internal config cache properties 
  *
@@ -49,17 +51,35 @@ class AgaviTestingConfigCache extends AgaviConfigCache
 		self::$handlers = null;
 	}
 
-	public static function setupHandlers()
+	/**
+	 * Forget a previously-registered config handlers file so that a subsequent
+	 * addConfigHandlersFile() for the same path is treated as new again.
+	 *
+	 * The handler-file registry ($handlerFiles) is process-wide static state.
+	 * In a full test run other code (e.g. AgaviController loading a module's
+	 * config_handlers.xml) may already have registered the same file, which would
+	 * make addConfigHandlersFile() a no-op and leave the dirty flag unset. Tests
+	 * that assert on that behaviour call this first to restore a known precondition.
+	 */
+	public static function forgetHandlerFile($filename)
+	{
+		unset(self::$handlerFiles[$filename]);
+	}
+
+	#[\Override]
+    public static function setupHandlers()
 	{
 		parent::setupHandlers();
 	}
 
-	public static function getHandlerInfo($name)
+	#[\Override]
+    public static function getHandlerInfo($name)
 	{
 		return parent::getHandlerInfo($name);
 	}
 
-	public static function callHandler($name, $config, $cache, $context, array $handlerInfo = null)
+	#[\Override]
+    public static function callHandler($name, $config, $cache, $context, ?array $handlerInfo = null)
 	{
 		parent::callHandler($name, $config, $cache, $context, $handlerInfo);
 	}

@@ -1,5 +1,9 @@
 <?php
 
+use Agavi\AgaviContext;
+use Agavi\Testing\AgaviUnitTestCase;
+use Agavi\Validator\AgaviEmailValidator;
+
 class EmailValidatorWrapper extends AgaviEmailValidator
 {
 	protected $data;
@@ -10,12 +14,14 @@ class EmailValidatorWrapper extends AgaviEmailValidator
 		$this->data = $data;
 	}
 
-	public function &getData($paramname)
+	#[\Override]
+    public function &getData($paramname)
 	{
 		return $this->data;
 	}
 
-	public function validate()
+	#[\Override]
+    public function validate()
 	{
 		return parent::validate();
 	}
@@ -26,13 +32,15 @@ class AgaviEmailValidatorTest extends AgaviUnitTestCase
 {
 	protected $_vm, $validator;
 	
-	public function setUp()
+	#[\Override]
+    public function setUp(): void
 	{
 		$this->_vm = $this->getContext()->createInstanceFor('validation_manager');
-		$this->validator = $this->_vm->createValidator('EmailValidatorWrapper', array());
+		$this->validator = $this->_vm->createValidator('EmailValidatorWrapper', []);
 	}
 
-	public function tearDown()
+	#[\Override]
+    public function tearDown(): void
 	{
 		unset($this->validator);
 	}
@@ -44,19 +52,19 @@ class AgaviEmailValidatorTest extends AgaviUnitTestCase
 	
 	public function testexecute()
 	{
-		$good = array(
+		$good = [
 			'bob@agavi.org',
 			'me.bob@agavi.org',
 			'stupidmonkey@example.com',
 			'anotherbunk@bunk-domain.com',
 			'somethingelse@ez-bunk-domain.biz'
-		);
-		$bad = array(
+		];
+		$bad = [
 			'bad mojo@agavi.org',
 			'bunk(data)@agavi.org',
 			'bunk@agavi info.com',
 			'sjklsdfsfd'
-		);
+		];
 		$error = '';
 		foreach ($good as &$value) {
 			$this->validator->setData($value);

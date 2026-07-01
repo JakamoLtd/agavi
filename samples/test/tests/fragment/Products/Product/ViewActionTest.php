@@ -1,52 +1,54 @@
-<?php 
+<?php
+
+use Agavi\Testing\AgaviActionTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+
 /**
  * @AgaviActionName Products.View
  * @AgaviModuleName Products
  */
 class Products_Product_ViewActionTest extends AgaviActionTestCase
 {
-	protected static $products = array(
-		array(
+	protected static $products = [
+		[
 			'id'    => 8172401,
 			'name'  => 'TPS Report Cover Sheet',
 			'price' => 0.89,
-		),
-		array(
+		],
+		[
 			'id'    => 917246,
 			'name'  => 'Weighted Companion Cube',
 			'price' => 129.99,
-		),
-		array(
+		],
+		[
 			'id'    => 7856122,
 			'name'  => 'Longcat',
 			'price' => 14599,
-		),
-		array(
+		],
+		[
 			'id'    => 123456,
 			'name'  => 'Red Stapler',
 			'price' => 3.14,
-		),
-		array(
+		],
+		[
 			'id'    => 3165463,
 			'name'  => 'Sildenafil Citrate',
 			'price' => 14.69,
-		),
-	);
+		],
+	];
 	
-	public function __construct($name = NULL, array $data = array(), $dataName = '')
+	public function __construct($name = NULL, array $data = [], $dataName = '')
 	{
 		parent::__construct($name, $data, $dataName);
 		$this->actionName = 'Product.View';
 		$this->moduleName = 'Products';
 	}
 	
-	/**
-	 * @dataProvider successViewValidProductsData
-	 */
+	#[DataProvider('successViewValidProductsData')]
 	public function testSuccessViewValidProducts($parameters, $price)
 	{
 		$this->setRequestMethod('read');
-		$this->setRequestData($this->createRequestDataHolder(array(AgaviWebRequestDataHolder::SOURCE_PARAMETERS => $parameters)));
+		$this->setRequestData($parameters); // no-op retained for BC
 		$this->runAction();
 		$this->assertValidatedArgument('id');
 		$this->assertViewNameEquals('Success');
@@ -55,25 +57,23 @@ class Products_Product_ViewActionTest extends AgaviActionTestCase
 		$this->assertEquals($price, $this->getAttribute('product')->getPrice());
 	}
 	
-	public function successViewValidProductsData()
+	public static function successViewValidProductsData()
 	{
-		$retval = array();
+		$retval = [];
 		foreach(self::$products as $product) {
-			$retval['id only: ' . $product['id']] = array(array('id' => $product['id']), $product['price']);
+			$retval['id only: ' . $product['id']] = [['id' => $product['id']], $product['price']];
 		}
 		foreach(self::$products as $product) {
-			$retval['id+name: ' . $product['id'] . '/' . $product['name']] = array(array('id' => $product['id'], 'name' => $product['name']), $product['price']);
+			$retval['id+name: ' . $product['id'] . '/' . $product['name']] = [['id' => $product['id'], 'name' => $product['name']], $product['price']];
 		}
 		return $retval;
 	}
 	
-	/**
-	 * @dataProvider errorViewInvalidProductsData
-	 */
+	#[DataProvider('errorViewInvalidProductsData')]
 	public function testErrorViewInvalidProducts($parameters)
 	{
 		$this->setRequestMethod('read');
-		$this->setArguments($this->createRequestDataHolder(array(AgaviWebRequestDataHolder::SOURCE_PARAMETERS => $parameters)));
+		$this->setArguments($parameters);
 		$this->runAction();
 		$this->assertValidatedArgument('id');
 		$this->assertViewNameEquals('Error');
@@ -83,7 +83,7 @@ class Products_Product_ViewActionTest extends AgaviActionTestCase
 	public function testErrorViewFailedProductValidation()
 	{
 		$this->setRequestMethod('read');
-		$this->setArguments($this->createRequestDataHolder(array(AgaviWebRequestDataHolder::SOURCE_PARAMETERS => array('id' => ''))));
+		$this->setArguments(['id' => '']);
 		$this->runAction();
 		$this->assertValidatedArgument('id');
 		$this->assertFailedArgument('id');
@@ -91,16 +91,16 @@ class Products_Product_ViewActionTest extends AgaviActionTestCase
 		$this->assertViewModuleNameEquals('Products');
 	}
 	
-	public function errorViewInvalidProductsData()
+	public static function errorViewInvalidProductsData()
 	{
-		return array(
-			'only product name given' => array(array('name' => 'Red Stapler')),
-			'invalid product id given' => array(array('id' => 81236123)),
-			'negative product id given' => array(array('id' => -1)),
-			'id and name given, id invalid' => array(array('id' => 123457, 'name' => 'Red Stapler')),
-			'id and name given, name invalid' => array(array('id' => 123456, 'name' => 'Red StaplerZOMG')),
-			'id and name given, both invalid' => array(array('id' => -1, 'name' => 'Red StaplerZOMG')),
-		);
+		return [
+			'only product name given' => [['name' => 'Red Stapler']],
+			'invalid product id given' => [['id' => 81236123]],
+			'negative product id given' => [['id' => -1]],
+			'id and name given, id invalid' => [['id' => 123457, 'name' => 'Red Stapler']],
+			'id and name given, name invalid' => [['id' => 123456, 'name' => 'Red StaplerZOMG']],
+			'id and name given, both invalid' => [['id' => -1, 'name' => 'Red StaplerZOMG']],
+		];
 	}
 	
 	public function testIsNotSimple()

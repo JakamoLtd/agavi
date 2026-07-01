@@ -1,4 +1,8 @@
 <?php
+
+use Agavi\Testing\AgaviPhpUnitTestCase;
+use Agavi\Config\AgaviConfigHandler;
+
 class MyTestConfigHandler extends AgaviConfigHandler
 {
 	public function execute($config, $context = null)
@@ -7,16 +11,18 @@ class MyTestConfigHandler extends AgaviConfigHandler
 	}
 }
 
-class AgaviConfigHandlerTest extends AgaviUnitTestCase
+class AgaviConfigHandlerTest extends AgaviPhpUnitTestCase
 {
 	protected $ch = null;
-	public function setUp()
+	#[\Override]
+    public function setUp(): void
 	{
 		$this->ch = new MyTestConfigHandler();
 		$this->ch->initialize('MyValidationFile.mvf');
 	}
 
-	public function tearDown()
+	#[\Override]
+    public function tearDown(): void
 	{
 		$this->ch = null;
 	}

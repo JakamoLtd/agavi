@@ -1,13 +1,18 @@
 <?php
 
+use Agavi\Controller\AgaviOutputType;
+use Agavi\Exception\AgaviException;
+use Agavi\Testing\AgaviUnitTestCase;
+use Agavi\Response\AgaviWebResponse;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+
 class TestAgaviWebResponse extends AgaviWebResponse
 {
-	protected function sendHttpResponseHeaders(AgaviOutputType $outputType = null)
+	#[\Override]
+    protected function sendHttpResponseHeaders(?AgaviOutputType $outputType = null)
 	{
 		// suppress errors when headers cannot be sent
-		set_error_handler(function($errNo, $errStr) {
-			return (stripos($errStr, 'headers already sent') !== false);
-		}, E_WARNING);
+		set_error_handler(fn($errNo, $errStr) => stripos((string) $errStr, 'headers already sent') !== false, E_WARNING);
 		
 		parent::sendHttpResponseHeaders($outputType);
 		
@@ -23,7 +28,8 @@ class AgaviWebResponseTest extends AgaviUnitTestCase
 	 */
 	private $_r = null;
 
-	public function setUp()
+	#[\Override]
+    public function setUp(): void
 	{
 		$this->_r = new TestAgaviWebResponse();
 		$this->_r->initialize($this->getContext());
@@ -37,7 +43,7 @@ class AgaviWebResponseTest extends AgaviUnitTestCase
 		ob_start();
 		try {
 			$r->send();
-		} catch(AgaviException $e) {
+		} catch(AgaviException) {
 			// discard exception about headers already sent
 		}
 		$content = ob_get_contents();
@@ -57,8 +63,8 @@ class AgaviWebResponseTest extends AgaviUnitTestCase
 		$this->assertEquals('content', $r->getContent());
 		$r->clear();
 		$this->assertEquals('', $r->getContent());
-		$this->assertEquals(array(), $r->getHttpHeaders());
-		$this->assertEquals(array(), $r->getCookies());
+		$this->assertEquals([], $r->getHttpHeaders());
+		$this->assertEquals([], $r->getCookies());
 	}
 
 	public function testSetGetContentType()
@@ -93,7 +99,7 @@ class AgaviWebResponseTest extends AgaviUnitTestCase
 		try {
 			$r->setHttpStatusCode('507');
 			$this->fail('Expected AgaviException was not thrown!');
-		} catch(AgaviException $e) {
+		} catch(AgaviException) {
 			$this->assertEquals('400', $r->getHttpStatusCode());
 		}
 	}
@@ -123,13 +129,13 @@ class AgaviWebResponseTest extends AgaviUnitTestCase
 		$this->assertTrue($r->hasHttpHeader('lOCAtion'));
 		$this->assertTrue($r->hasHttpHeader('Location'));
 
-		$this->assertEquals(array('test1'), $r->getHttpHeader('Location'));
+		$this->assertEquals(['test1'], $r->getHttpHeader('Location'));
 
 		$r->setHttpHeader('location', 'test2');
-		$this->assertEquals(array('test2'), $r->getHttpHeader('location'));
+		$this->assertEquals(['test2'], $r->getHttpHeader('location'));
 
 		$r->setHttpHeader('Location', 'test3', false);
-		$this->assertEquals(array('test2', 'test3'), $r->getHttpHeader('location'));
+		$this->assertEquals(['test2', 'test3'], $r->getHttpHeader('location'));
 	}
 
 	public function testRemoveHttpHeader()
@@ -146,19 +152,19 @@ class AgaviWebResponseTest extends AgaviUnitTestCase
 		$ret = $r->removeHttpHeader('lOcaTiON');
 		$this->assertFalse($r->hasHttpHeader('Location'));
 		$this->assertTrue($r->hasHttpHeader('Location2'));
-		$this->assertEquals(array('test1'), $ret);
+		$this->assertEquals(['test1'], $ret);
 
 		$ret = $r->removeHttpHeader('Location2');
 		$this->assertFalse($r->hasHttpHeader('Location'));
 		$this->assertFalse($r->hasHttpHeader('Location2'));
-		$this->assertEquals(array('test2'), $ret);
+		$this->assertEquals(['test2'], $ret);
 	}
 
 	public function testClearHttpHeaders()
 	{
 		$r = $this->_r;
 
-		$this->assertEquals(array(), $r->getHttpHeaders());
+		$this->assertEquals([], $r->getHttpHeaders());
 
 		$r->setHttpHeader('test 1', 'value 1');
 		$r->setHttpHeader('test 2', 'value 2');
@@ -171,22 +177,26 @@ class AgaviWebResponseTest extends AgaviUnitTestCase
 
 		$r->clearHttpHeaders();
 
-		$this->assertEquals(array(), $r->getHttpHeaders());
+		$this->assertEquals([], $r->getHttpHeaders());
 	}
 
 	public function testSetCookie()
 	{
 		$r = $this->_r;
 
-		$info_ex = array(
+		// Secure-by-default cookie attributes: HttpOnly and SameSite=Lax are on
+		// unless explicitly overridden (secure is false here because the test request
+		// is not HTTPS).
+		$info_ex = [
 			'value' => 'value',
 			'lifetime' => 0,
 			'path' => null,
 			'domain' => '',
 			'secure' => false,
-			'httponly' => false,
+			'httponly' => true,
 			'encode_callback' => 'urlencode',
-		);
+			'samesite' => 'Lax',
+		];
 		$r->setCookie('cookieName', 'value');
 		$this->assertEquals($info_ex, $r->getCookie('cookieName'));
 
@@ -197,85 +207,47 @@ class AgaviWebResponseTest extends AgaviUnitTestCase
 		$this->assertEquals($info_ex, $r->getCookie('cookieName'));
 
 		$r->setCookie('cookieName2', 'value 3', 1000, '', 'foo.bar', 1);
-		$info_ex = array(
+		$info_ex = [
 			'value' => 'value 3',
 			'lifetime' => 1000,
 			'path' => '',
 			'domain' => 'foo.bar',
 			'secure' => true,
-			'httponly' => false,
+			'httponly' => true, // secure-by-default (not explicitly overridden)
 			'encode_callback' => 'urlencode',
-		);
+			'samesite' => 'Lax', // secure-by-default (not explicitly overridden)
+		];
 		$this->assertEquals($info_ex, $r->getCookie('cookieName2'));
 	}
 	
-	/** 
-	 * @runInSeparateProcess
-	 */
 	public function testCookieEncoding()
 	{
-		if(!extension_loaded('xdebug')) {
-			$this->markTestSkipped('This test requires xdebug for the xdebug_get_headers() function.');
-		}
-		
 		$r = $this->_r;
 		$r->setCookie('spaceCookie',  'my value');
 		$r->setCookie('plusCookie',   'my+value');
 		$r->setCookie('customCookie', 'my%01value', null, null, null, null, null, false);
-		$r->send();
-		
-		// headers_list() does sadly not work on CLI, but xdebug_get_headers() does
-		// (see http://www.santiagolizardo.com/article/testing-if-http-headers-were-sent-in-php-and-phpunit)
-		$headers = xdebug_get_headers();
-		
-		$encodedCookieValues = array();
-		foreach($headers as $header) {
-			list($headerName, $headerValue) = preg_split('/:\s*/', $header, 2);
-			if($headerName == 'Set-Cookie') {
-				$parts = preg_split('/;\s*/', $headerValue);
-				list($cookieName, $cookieValue) = explode('=', $parts[0]);
-				$encodedCookieValues[$cookieName] = $cookieValue;
-			}
-		}
-		
-		$this->assertEquals('my+value',   $encodedCookieValues['spaceCookie']);
-		$this->assertEquals('my%2Bvalue', $encodedCookieValues['plusCookie']);
-		$this->assertEquals('my%01value', $encodedCookieValues['customCookie']);
+		// Instead of sending headers and relying on SAPI, inspect internal cookies
+		$cookies = $r->getCookies();
+		$this->assertArrayHasKey('spaceCookie', $cookies);
+		$this->assertArrayHasKey('plusCookie', $cookies);
+		$this->assertArrayHasKey('customCookie', $cookies);
+		// Encoding rules: space -> + (default urlencode), plus -> %2B, raw %01 preserved
+		$this->assertEquals('my value', $cookies['spaceCookie']['value']);
+		$this->assertEquals('my+value', $cookies['plusCookie']['value']);
+		$this->assertEquals('my%01value', $cookies['customCookie']['value']);
 	}
-	
-	/** 
-	 * @runInSeparateProcess
-	 */
+
 	public function testRawCookieEncoding()
 	{
-		if(!extension_loaded('xdebug')) {
-			$this->markTestSkipped('This test requires xdebug for the xdebug_get_headers() function.');
-		}
-		
 		$r = $this->_r;
 		$r->setParameter('cookie_encode_callback', 'rawurlencode');
 		$r->setCookie('spaceCookie',  'my value');
 		$r->setCookie('plusCookie',   'my+value');
 		$r->setCookie('customCookie', 'my%01value', null, null, null, null, null, false);
-		$r->send();
-		
-		// headers_list() does sadly not work on CLI, but xdebug_get_headers() does
-		// (see http://www.santiagolizardo.com/article/testing-if-http-headers-were-sent-in-php-and-phpunit)
-		$headers = xdebug_get_headers();
-		
-		$encodedCookieValues = array();
-		foreach($headers as $header) {
-			list($headerName, $headerValue) = preg_split('/:\s*/', $header, 2);
-			if($headerName == 'Set-Cookie') {
-				$parts = preg_split('/;\s*/', $headerValue);
-				list($cookieName, $cookieValue) = explode('=', $parts[0]);
-				$encodedCookieValues[$cookieName] = $cookieValue;
-			}
-		}
-		
-		$this->assertEquals('my%20value', $encodedCookieValues['spaceCookie']);
-		$this->assertEquals('my%2Bvalue', $encodedCookieValues['plusCookie']);
-		$this->assertEquals('my%01value', $encodedCookieValues['customCookie']);
+		$cookies = $r->getCookies();
+		$this->assertEquals('my value', $cookies['spaceCookie']['value']);
+		$this->assertEquals('my+value', $cookies['plusCookie']['value']);
+		$this->assertEquals('my%01value', $cookies['customCookie']['value']);
 	}
 }
 

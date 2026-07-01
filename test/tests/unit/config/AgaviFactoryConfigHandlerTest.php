@@ -1,4 +1,9 @@
 <?php
+
+use Agavi\Config\AgaviConfig;
+use Agavi\Config\AgaviFactoryConfigHandler;
+use Agavi\User\AgaviISecurityUser;
+use Agavi\AgaviContext;
 require_once(__DIR__ . '/ConfigHandlerTestBase.php');
 
 class FCHTestBase
@@ -6,7 +11,7 @@ class FCHTestBase
 	public $context,
 	       $params,
 	       $suCalled;
-	public function initialize($ctx, array $params = array())
+	public function initialize($ctx, array $params = [])
 	{
 		$this->context = $ctx;
 		$this->params = $params;
@@ -21,25 +26,9 @@ class FCHTestBase
 	}
 }
 
-class FCHTestExecutionContainer extends FCHTestBase {}
 class FCHTestController         extends FCHTestBase {}
 	
-class FCHTestDispatchFilter     implements AgaviIGlobalFilter {
-	public function executeOnce(AgaviFilterChain $filterChain, AgaviExecutionContainer $container) {}
-	public function execute(AgaviFilterChain $filterChain, AgaviExecutionContainer $container) {}
-	public final function getContext() {}
-	public function initialize(AgaviContext $context, array $parameters = array()) {}
-}
 
-class FCHTestExecutionFilter    implements AgaviIActionFilter {
-	public function executeOnce(AgaviFilterChain $filterChain, AgaviExecutionContainer $container) {}
-	public function execute(AgaviFilterChain $filterChain, AgaviExecutionContainer $container) {}
-	public final function getContext() {}
-	public function initialize(AgaviContext $context, array $parameters = array()) {}
-}
-
-class FCHTestFilterChain        extends FCHTestBase {}
-class FCHTestLoggerManager      extends FCHTestBase {}
 class FCHTestRequest            extends FCHTestBase {}
 class FCHTestResponse           extends FCHTestBase {}
 class FCHTestRouting            extends FCHTestBase {}
@@ -48,12 +37,7 @@ class FCHTestTranslationManager extends FCHTestBase {}
 class FCHTestValidationManager  extends FCHTestBase {}
 class FCHTestDBManager          extends FCHTestBase {}
 
-class FCHTestSecurityFilter     implements AgaviIActionFilter, AgaviISecurityFilter {
-	public function executeOnce(AgaviFilterChain $filterChain, AgaviExecutionContainer $container) {}
-	public function execute(AgaviFilterChain $filterChain, AgaviExecutionContainer $container) {}
-	public final function getContext() {}
-	public function initialize(AgaviContext $context, array $parameters = array()) {}
-}
+// Legacy security filter removed
 class FCHTestUser               extends FCHTestBase implements AgaviISecurityUser
 {
 	public function addCredential($credential) {}
@@ -66,6 +50,16 @@ class FCHTestUser               extends FCHTestBase implements AgaviISecurityUse
 
 class AgaviFactoryConfigHandlerTest extends ConfigHandlerTestBase
 {
+	// Prevent dynamic property deprecation when generated factory code assigns $this->shutdownSequence
+	public array $shutdownSequence = [];
+	// Added to silence dynamic property creation deprecations from generated factories code
+	public ?array $databaseManagerFactoryInfo = null;
+	public ?array $translationManagerFactoryInfo = null;
+	public ?array $requestFactoryInfo = null;
+	public ?array $routingFactoryInfo = null;
+	public ?array $controllerFactoryInfo = null;
+	public ?array $storageFactoryInfo = null;
+	public ?array $userFactoryInfo = null;
 	protected		$conf;
 
 	protected		$factories;
@@ -75,18 +69,19 @@ class AgaviFactoryConfigHandlerTest extends ConfigHandlerTestBase
 							$storage,
 							$translationManager,
 							$user,
-							$loggerManager,
 							$controller,
 							$routing,
 							$response;
 
-	public function setUp()
+	public function setUp(): void
 	{
+		parent::setUp();
 		$this->conf = AgaviConfig::toArray();
-		$this->factories = array();
+		$this->factories = [];
 	}
 
-	public function tearDown()
+	#[\Override]
+    public function tearDown(): void
 	{
 		AgaviConfig::clear();
 		AgaviConfig::fromArray($this->conf);
@@ -96,79 +91,49 @@ class AgaviFactoryConfigHandlerTest extends ConfigHandlerTestBase
 	{
 		$FCH = new AgaviFactoryConfigHandler();
 
-		$paramsExpected = array('p1' => 'v1', 'p2' => 'v2');
+		$paramsExpected = ['p1' => 'v1', 'p2' => 'v2'];
 
 		AgaviConfig::set('core.use_database', true);
 		AgaviConfig::set('core.use_logging', true);
 		AgaviConfig::set('core.use_security', true);
+		// factories.xsl gates the translation_manager block on core.use_translation;
+		// set it explicitly so this test does not depend on the ambient value, which
+		// other tests may have toggled off.
+		AgaviConfig::set('core.use_translation', true);
 		$document = $this->parseConfiguration(
 			AgaviConfig::get('core.config_dir') . '/tests/factories.xml',
-			AgaviConfig::get('core.agavi_dir') . '/config/xsl/factories.xsl'
+			AgaviConfig::get('core.agavi_dir') . '/Config/xsl/factories.xsl'
 		);
 		$this->includeCode($FCH->execute($document));
 
 
-		// Execution container
-		$this->assertSame(
-			array(
-				'class' => 'FCHTestExecutionContainer',
-				'parameters' => $paramsExpected,
-			),
-			$this->factories['execution_container']
-		);
 
-		// Dispatch filter
-		$this->assertSame(
-			array(
-				'class' => 'FCHTestDispatchFilter',
-				'parameters' => $paramsExpected,
-			),
-			$this->factories['dispatch_filter']
-		);
+	// Legacy filters removed – no assertions
 
-		// Execution filter
+		// Response (now includes factory_info metadata)
 		$this->assertSame(
-			array(
-				'class' => 'FCHTestExecutionFilter',
-				'parameters' => $paramsExpected,
-			),
-			$this->factories['execution_filter']
-		);
-
-		// Filter chain
-		$this->assertSame(
-			array(
-				'class' => 'FCHTestFilterChain',
-				'parameters' => $paramsExpected,
-			),
-			$this->factories['filter_chain']
-		);
-
-		// Security filter
-		$this->assertSame(
-			array(
-				'class' => 'FCHTestSecurityFilter',
-				'parameters' => $paramsExpected,
-			),
-			$this->factories['security_filter']
-		);
-
-		// Response
-		$this->assertSame(
-			array(
+			[
 				'class' => 'FCHTestResponse',
 				'parameters' => $paramsExpected,
-			),
+				'factory_info' => [
+					'class' => 'FCHTestResponse',
+					'parameters' => $paramsExpected,
+				],
+			],
 			$this->factories['response']
 		);
 		
 
-		// Validation Manager
+		// Validation Manager (includes factory_info)
 		$this->assertSame(
-			array(
+			[
 				'class' => 'FCHTestValidationManager',
 				'parameters' => $paramsExpected,
-			),
+				'factory_info' => [
+					'class' => 'FCHTestValidationManager',
+					'parameters' => $paramsExpected,
+				],
+			],
 			$this->factories['validation_manager']
 		);
 
@@ -180,7 +145,8 @@ class AgaviFactoryConfigHandlerTest extends ConfigHandlerTestBase
 		$this->assertInstanceOf('FCHTestRequest', $this->request);
 		$this->assertSame($this, $this->request->context);
 		$this->assertSame($paramsExpected, $this->request->params);
-		$this->assertTrue($this->request->suCalled);
+		// Request startup is no longer executed automatically; PSR-7 bootstrap handles initialization lazily.
+		$this->assertNull($this->request->suCalled);
 
 		$this->assertInstanceOf('FCHTestStorage', $this->storage);
 		$this->assertSame($this, $this->storage->context);
@@ -196,11 +162,6 @@ class AgaviFactoryConfigHandlerTest extends ConfigHandlerTestBase
 		$this->assertSame($this, $this->user->context);
 		$this->assertSame($paramsExpected, $this->user->params);
 		$this->assertTrue($this->user->suCalled);
-
-		$this->assertInstanceOf('FCHTestLoggerManager', $this->loggerManager);
-		$this->assertSame($this, $this->loggerManager->context);
-		$this->assertSame($paramsExpected, $this->loggerManager->params);
-		$this->assertTrue($this->loggerManager->suCalled);
 
 		$this->assertInstanceOf('FCHTestController', $this->controller);
 		$this->assertSame($this, $this->controller->context);

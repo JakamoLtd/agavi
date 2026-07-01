@@ -1,22 +1,43 @@
 <?php
 
+use Agavi\Action\AgaviAction;
+use Agavi\Request\AgaviRequestDataHolder;
+use Agavi\Request\AgaviWebRequest;
+use Agavi\Util\AgaviParameterHolder;
+use Agavi\Testing\AgaviUnitTestCase;
+
 class SampleAction extends AgaviAction {
 	public function execute(AgaviParameterHolder $parameters)
 	{
 	}
 }
 
-class ActionTest extends AgaviUnitTestCase
+class AgaviActionTest extends AgaviUnitTestCase
 {
 	private $_action = null;
 
-	public function setUp()
+	#[\Override]
+    public function setUp(): void
 	{
 		$this->_action = new SampleAction();
-		$this->_action->initialize($this->getContext()->getController()->createExecutionContainer('Foo', 'Bar'));
+		// Initialize action with lightweight initialization context (descriptor-less)
+		$controller = $this->getContext()->getController();
+		// Use synthetic descriptor (module/action need not exist for initialization tests)
+		$descriptor = new \Agavi\Execution\ActionDescriptor('Foo','Bar','GET','html', false);
+		$lw = new \Agavi\Execution\LightweightActionInitContext(
+			$this->getContext(),
+			$descriptor->module,
+			$descriptor->action,
+			$descriptor->method,
+			$descriptor->outputType,
+			new AgaviWebRequest(),
+			$controller->getGlobalResponse()
+		);
+		$this->_action->initialize($lw);
 	}
 
-	public function tearDown()
+	#[\Override]
+    public function tearDown(): void
 	{
 		$this->_action = null;
 	}
@@ -40,7 +61,7 @@ class ActionTest extends AgaviUnitTestCase
 
 	public function testhandleError()
 	{
-		$this->assertEquals('Error', $this->_action->handleError(new AgaviRequestDataHolder()));
+		$this->assertEquals('Error', $this->_action->handleError(new AgaviWebRequest()));
 	}
 
 	public function testisSecure()
@@ -50,7 +71,7 @@ class ActionTest extends AgaviUnitTestCase
 
 	public function testvalidate()
 	{
-		$this->assertTrue($this->_action->validate(new AgaviRequestDataHolder()));
+		$this->assertTrue($this->_action->validate(new AgaviWebRequest()));
 	}
 }
 ?>

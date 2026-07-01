@@ -1,26 +1,53 @@
 <?php
+
+use Agavi\Testing\AgaviUnitTestCase;
+use Agavi\User\AgaviSecurityUser;
+use Agavi\AgaviContext;
+
 class SampleSecurityUser extends AgaviSecurityUser
 {
-	public function initialize(AgaviContext $context, array $parameters = array())
+	#[\Override]
+    public function initialize(AgaviContext $context, array $parameters = [])
 	{
 		parent::initialize($context, $parameters);
 		$this->context = $context;
 		
 		if(count($parameters)) {
-			$this->setParameters($parameters);
+			$this->attributes = $parameters;
 		}
-		$this->attributes = array();
+		$this->attributes = [];
 	}
 }
 
-class SecurityUserTest extends AgaviUnitTestCase
+
+class AgaviSecurityUserTest extends AgaviUnitTestCase
 {
+
+	protected $context;
+	
+	public function initialize(AgaviContext $context, array $parameters = [])
+	{
+		$this->context = $context;
+		
+		if(count($parameters)) {
+			$this->setParameters($parameters);
+		}
+		$this->attributes = [];
+	}
+	
 	private $_u = null;
 
-	public function setUp()
+	#[\Override]
+    public function setUp(): void
 	{
 		$this->_u = new SampleSecurityUser();
 		$this->_u->initialize($this->getContext());
+		// The authenticated flag and credentials live in the shared storage/session,
+		// so a prior test that authenticated a user (e.g. setAuthenticated(true) in
+		// the dispatch/slot middleware tests) would otherwise leak in and make this
+		// fresh user report isAuthenticated()===true. Establish a clean baseline.
+		$this->_u->setAuthenticated(false);
+		$this->_u->clearCredentials();
 	}
 
 	public function testaddCredential()
@@ -40,13 +67,13 @@ class SecurityUserTest extends AgaviUnitTestCase
 		$this->_u->addCredential('test3');
 		$this->_u->addCredential('test4');
 		$this->assertTrue($this->_u->hasCredentials('test1'));
-		$this->assertTrue($this->_u->hasCredentials(array('test2', 'test3')));
-		$this->assertTrue($this->_u->hasCredentials(array('test1', array('test2', 'test3'))));
-		$this->assertTrue($this->_u->hasCredentials(array('test1', array('test2', 'test5'))));
+		$this->assertTrue($this->_u->hasCredentials(['test2', 'test3']));
+		$this->assertTrue($this->_u->hasCredentials(['test1', ['test2', 'test3']]));
+		$this->assertTrue($this->_u->hasCredentials(['test1', ['test2', 'test5']]));
 		$this->assertFalse($this->_u->hasCredentials('test5'));
-		$this->assertFalse($this->_u->hasCredentials(array('test2', 'test5')));
-		$this->assertFalse($this->_u->hasCredentials(array('test5', array('test2', 'test3'))));
-		$this->assertFalse($this->_u->hasCredentials(array('test1', array('test5', 'test6'))));
+		$this->assertFalse($this->_u->hasCredentials(['test2', 'test5']));
+		$this->assertFalse($this->_u->hasCredentials(['test5', ['test2', 'test3']]));
+		$this->assertFalse($this->_u->hasCredentials(['test1', ['test5', 'test6']]));
 	}
 	
 	public function teststrictCredentialComparison()
@@ -64,16 +91,16 @@ class SecurityUserTest extends AgaviUnitTestCase
 		$this->_u->addCredential('test1');
 		$this->_u->addCredential('test2');
 		$this->_u->addCredential('test3');
-		$this->assertTrue($this->_u->hasCredentials(array('test1', 'test2', 'test3')));
+		$this->assertTrue($this->_u->hasCredentials(['test1', 'test2', 'test3']));
 		$this->_u->removeCredential('test2');
-		$this->assertTrue($this->_u->hasCredentials(array('test3', 'test1')));
-		$this->assertFalse($this->_u->hasCredentials(array('test1', 'test2', 'test3')));
-		$this->assertFalse($this->_u->hasCredentials(array('test2')));
+		$this->assertTrue($this->_u->hasCredentials(['test3', 'test1']));
+		$this->assertFalse($this->_u->hasCredentials(['test1', 'test2', 'test3']));
+		$this->assertFalse($this->_u->hasCredentials(['test2']));
 		$this->_u->removeCredential('test1');
-		$this->assertTrue($this->_u->hasCredentials(array('test3')));
-		$this->assertFalse($this->_u->hasCredentials(array('test1')));
+		$this->assertTrue($this->_u->hasCredentials(['test3']));
+		$this->assertFalse($this->_u->hasCredentials(['test1']));
 		$this->_u->removeCredential('test3');
-		$this->assertFalse($this->_u->hasCredentials(array('test3')));
+		$this->assertFalse($this->_u->hasCredentials(['test3']));
 	}
 
 	public function testSetIsAuthenticated()

@@ -9,14 +9,13 @@
 		
 		<dispatch_filter class="AgaviDispatchFilter" />
 		
-		<execution_container class="AgaviExecutionContainer" />
 		
 		<execution_filter class="AgaviExecutionFilter" />
 		
 		<filter_chain class="AgaviFilterChain" />
 		
-		<logger_manager class="AgaviLoggerManager" />
-		
+		<!-- legacy logger_manager removed (replaced by the PSR-3 Log stack; configure levels/sinks in index.php via Agavi\Logging\Log) -->
+
 		<request class="AgaviWebRequest" />
 		
 		<response class="AgaviWebResponse">

@@ -1,32 +1,43 @@
 <?php
 
-class SampleResponse extends AgaviResponse
+use Agavi\Controller\AgaviOutputType;
+use Agavi\Testing\AgaviUnitTestCase;
+use Agavi\Response\AgaviWebResponse;
+
+class SampleResponse extends AgaviWebResponse
 {
-	public function clear()
+	#[\Override]
+    public function clear()
 	{
 	}
 
-	public function send(AgaviOutputType $ot = null)
+	#[\Override]
+    public function send(?AgaviOutputType $ot = null)
 	{
 	}
 	
-	public function setRedirect($to)
+	#[\Override]
+    public function setRedirect($location, $code = 302)
 	{
 	}
 	
-	public function getRedirect()
+	#[\Override]
+    public function getRedirect()
 	{
 	}
 	
-	public function hasRedirect()
+	#[\Override]
+    public function hasRedirect()
 	{
 	}
 	
-	public function clearRedirect()
+	#[\Override]
+    public function clearRedirect()
 	{
 	}
 	
-	public function merge(AgaviResponse $other)
+	#[\Override]
+    public function merge($other)
 	{
 	}
 }
@@ -35,7 +46,8 @@ class AgaviResponseTest extends AgaviUnitTestCase
 {
 	private $_r = null;
 
-	public function setUp()
+	#[\Override]
+    public function setUp(): void
 	{
 		$this->_r = new SampleResponse();
 		$this->_r->initialize($this->getContext());

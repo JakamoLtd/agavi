@@ -1,5 +1,8 @@
 <?php
 
+use Agavi\Routing\AgaviIRoutingValue;
+use Agavi\Routing\AgaviRoutingCallback;
+
 class GenObjectRoutingCallback extends AgaviRoutingCallback
 {
 	/**
@@ -15,7 +18,8 @@ class GenObjectRoutingCallback extends AgaviRoutingCallback
 	 * @author     Dominik del Bondio <ddb@bitxtender.com>
 	 * @since      0.11.0
 	 */
-	public function onGenerate(array $defaultParameters, array &$userParameters, array &$userOptions)
+	#[\Override]
+    public function onGenerate(array $defaultParameters, array &$userParameters, array &$userOptions)
 	{
 		if(isset($userParameters['value']) && $userParameters['value'] instanceof AgaviIRoutingValue) {
 			if($this->getParameter('set_as_string', false)) {

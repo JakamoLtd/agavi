@@ -1,4 +1,11 @@
 <?php
+
+use Agavi\Config\AgaviConfig;
+use Agavi\Config\AgaviFilterConfigHandler;
+use Agavi\Filter\AgaviIFilter;
+use Agavi\Filter\AgaviFilterChain;
+use Agavi\AgaviContext;
+
 require_once(__DIR__ . '/ConfigHandlerTestBase.php');
 
 class FCHTestFilter1 implements AgaviIFilter
@@ -6,14 +13,14 @@ class FCHTestFilter1 implements AgaviIFilter
 	public $context;
 	public $params;
 
-	public function initialize(AgaviContext $ctx, array $params = array())
+	public function initialize(AgaviContext $ctx, array $params = [])
 	{
 		$this->context = $ctx;
 		$this->params = $params;
 	}
 
-	public function executeOnce(AgaviFilterChain $filterChain, AgaviExecutionContainer $container) {}
-	public function execute(AgaviFilterChain $filterChain, AgaviExecutionContainer $container) {}
+	public function executeOnce(AgaviFilterChain $filterChain, $container) {}
+	public function execute(AgaviFilterChain $filterChain, $container) {}
 	public final function getContext() {}
 }
 
@@ -25,7 +32,16 @@ class AgaviFilterConfigHandlerTest extends ConfigHandlerTestBase
 {
 	protected $context;
 
-	public function setUp()
+	protected function getContext()
+	{
+		// Disable translation system for this test suite while translation/i18n rewrite pending
+		AgaviConfig::set('core.use_translation', false, true);
+		$context = AgaviContext::getInstance('test');
+		return $context;
+	}
+
+	#[\Override]
+    public function setUp(): void
 	{
 		$this->context = $this->getContext();
 	}
@@ -38,10 +54,10 @@ class AgaviFilterConfigHandlerTest extends ConfigHandlerTestBase
 		
 		$document = $this->parseConfiguration(
 			AgaviConfig::get('core.config_dir') . '/tests/filters.xml',
-			AgaviConfig::get('core.agavi_dir') . '/config/xsl/filters.xsl'
+			AgaviConfig::get('core.agavi_dir') . '/Config/xsl/filters.xsl'
 		);
 
-		$filters = array();
+		$filters = [];
 
 		$file = $this->getIncludeFile($FCH->execute($document));
 		include($file);
@@ -50,11 +66,11 @@ class AgaviFilterConfigHandlerTest extends ConfigHandlerTestBase
 		$this->assertCount(2, $filters);
 
 		$this->assertInstanceOf('FCHTestFilter1', $filters['filter1']);
-		$this->assertSame(array('comment' => true), $filters['filter1']->params);
+		$this->assertSame(['comment' => true], $filters['filter1']->params);
 		$this->assertSame($ctx, $filters['filter1']->context);
 
 		$this->assertInstanceOf('FCHTestFilter2', $filters['filter2']);
-		$this->assertSame(array(), $filters['filter2']->params);
+		$this->assertSame([], $filters['filter2']->params);
 		$this->assertSame($ctx, $filters['filter2']->context);
 	}
 }

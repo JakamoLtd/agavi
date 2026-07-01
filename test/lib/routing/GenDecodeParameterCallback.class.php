@@ -1,5 +1,7 @@
 <?php
 
+use Agavi\Routing\AgaviRoutingCallback;
+
 class GenDecodeParameterCallback extends AgaviRoutingCallback
 {
 	/**
@@ -15,9 +17,10 @@ class GenDecodeParameterCallback extends AgaviRoutingCallback
 	 * @author     Dominik del Bondio <ddb@bitxtender.com>
 	 * @since      0.11.0
 	 */
-	public function onGenerate(array $defaultParameters, array &$userParameters, array &$userOptions)
+	#[\Override]
+    public function onGenerate(array $defaultParameters, array &$userParameters, array &$userOptions)
 	{
-		$userParameters['string'] = rawurldecode($userParameters['string']);
+		$userParameters['string'] = rawurldecode((string) $userParameters['string']);
 		return true;
 	}
 }

@@ -1,231 +1,237 @@
 <?php
 
-class AgaviRoutingTest extends AgaviPhpUnitTestCase
+use PHPUnit\Framework\TestCase;
+use Agavi\Routing\AgaviRouting;
+use Symfony\Component\Routing\RouteCollection;
+use Symfony\Component\Routing\Route;
+use Symfony\Component\Routing\Exception\ResourceNotFoundException;
+
+/**
+ * Comprehensive routing tests scaffold.
+ * Each test will target a specific dimension (matching, generation, hierarchy, defaults, optional params, priority, callbacks, trie stats, negative cases).
+ */
+class AgaviRoutingTest extends TestCase
 {
-	protected $routing;
-	protected $parameters = array('enabled' => true);
-	
-	/**
-	 * Constructs a test case with the given name.
-	 *
-	 * @param  string $name
-	 * @param  array  $data
-	 * @param  string $dataName
-	 */
-	public function __construct($name = NULL, array $data = array(), $dataName = '')
-	{
-		parent::__construct($name, $data, $dataName);
-	}
-	
-	public function setUp()
-	{
-		$this->routing = new AgaviTestingRouting();
-		$this->routing->initialize(AgaviContext::getInstance(null), $this->parameters);
-		$this->routing->startup();
-	}
-	
-	public function testExecuteDisabled()
-	{
-		$this->routing->setParameter('enabled', false);
-		$container = $this->routing->execute();
-		$this->assertEquals(null, $container->getActionName());
-		$this->assertEquals(null, $container->getModuleName());
-	}
-	
-	public function testExecuteEmptyInput()
-	{
-		$this->routing->setInput('');
-		$container = $this->routing->execute();
-		$this->assertEquals(AgaviConfig::get('actions.error_404_action'), $container->getActionName());
-		$this->assertEquals(AgaviConfig::get('actions.error_404_module'), $container->getModuleName());
-		$this->assertEquals(array(), AgaviContext::getInstance(null)->getRequest()->getAttribute('matched_routes', 'org.agavi.routing'));
-	}
-	
-	public function testExecuteSimpleInput()
-	{
-		$this->routing->setInput('/');
-		$container = $this->routing->execute();
-		$this->assertEquals(AgaviConfig::get('actions.default_action'), $container->getActionName());
-		$this->assertEquals(AgaviConfig::get('actions.default_module'), $container->getModuleName());
-		$this->assertEquals(array('index'), AgaviContext::getInstance(null)->getRequest()->getAttribute('matched_routes', 'org.agavi.routing'));
-	}
-	
-	public function testExecuteUserAuthenticated()
-	{
-		$ctx = AgaviContext::getInstance(null);
-		$ctx->getUser()->setAuthenticated(true);
-		$this->routing->setInput('/');
-		$container = $this->routing->execute();
-		$this->assertEquals('LoggedIn', $container->getActionName());
-		$this->assertEquals('Auth', $container->getModuleName());
-		$this->assertEquals(array('user_logged_in'), $ctx->getRequest()->getAttribute('matched_routes', 'org.agavi.routing'));
-		$ctx->getUser()->setAuthenticated(false);
-	}
-	
-	public function testExecuteServer()
-	{	
-		$_SERVER['routing_test'] = 'foo';
-		$ctx = AgaviContext::getInstance(null);
-		$this->routing->setInput('/');
-		$this->routing->setRoutingSource('_SERVER', $_SERVER);
-		$container = $this->routing->execute();
-		$this->assertEquals('Matched', $container->getActionName());
-		$this->assertEquals('Server', $container->getModuleName());
-		$this->assertEquals(array('server'), $ctx->getRequest()->getAttribute('matched_routes', 'org.agavi.routing'));
-	}
-	
-	public function testExecuteRandomSource()
-	{	
-		$data = array();
-		$data['bar'] = 'foo';
-		$ctx = AgaviContext::getInstance(null);
-		$this->routing->setInput('/');
-		$this->routing->setRoutingSource('testingsource', $data);
-		$container = $this->routing->execute();
-		$this->assertEquals('Matched', $container->getActionName());
-		$this->assertEquals('TestingSource', $container->getModuleName());
-		$this->assertEquals(array('testingsource'), $ctx->getRequest()->getAttribute('matched_routes', 'org.agavi.routing'));
-	}
-	
-	/*
-	public function testExecuteNonexistantSource()
-	{	
-		$ctx = AgaviContext::getInstance(null);
-		$this->routing->setInput('/');
-		$container = $this->routing->execute();
-		$this->assertEquals('Matched', $container->getActionName());
-		$this->assertEquals('TestingSource', $container->getModuleName());
-		$this->assertEquals(array('testingsource'), $ctx->getRequest()->getAttribute('matched_routes', 'org.agavi.routing'));
-	}*/
+    /**
+     * Build a simple concrete routing instance for tests.
+     */
+    private function makeRouting(array $routesSpec): AgaviRouting
+    {
+        return new class($routesSpec) extends AgaviRouting {
+            public function __construct(private readonly array $spec) { parent::__construct(); }
+            protected function build(): array {
+                $rc = new RouteCollection();
+                $meta = [];
+                foreach ($this->spec as $name => $r) {
+                    $pattern = $r['pattern'];
+                    $defaults = $r['defaults'] ?? [];
+                    $route = new Route($pattern, $defaults);
+                    $rc->add($name, $route);
+                    $meta[$name] = [
+                        'gen_path' => $pattern,
+                        'cut' => false,
+                        'path' => $pattern,
+                        'match_full' => '#^' . trim((string) $pattern,'^') . '$#',
+                        'match_partial' => '#^' . trim((string) $pattern,'^') . '#',
+                        'opt' => [
+                            'parent' => $r['parent'] ?? null,
+                            'action' => $defaults['action'] ?? null,
+                        ]
+                    ];
+                }
+                return [$rc, $meta];
+            }
+        };
+    }
 
-	public function testMatchWithParam()
-	{
-		$ctx = AgaviContext::getInstance(null);
-		$this->routing->setInput('/withparam/5');
-		$container = $this->routing->execute();
-		$this->assertEquals(array('with_param'), AgaviContext::getInstance(null)->getRequest()->getAttribute('matched_routes', 'org.agavi.routing'));
-		$this->assertEquals(5, $ctx->getRequest()->getRequestData()->getParameter('number'));
-		$this->assertEquals('MatchedParam', $container->getActionName());
-		$this->assertEquals('TestWithParam', $container->getModuleName());
-	}
-	
-	public function testMatchWithMultipleParams()
-	{
-		$ctx = AgaviContext::getInstance(null);
-		$this->routing->setInput('/withmultipleparams/5/foo');
-		$container = $this->routing->execute();
-		$this->assertEquals(array('with_two_params'), AgaviContext::getInstance(null)->getRequest()->getAttribute('matched_routes', 'org.agavi.routing'));
-		$this->assertEquals(5, $ctx->getRequest()->getRequestData()->getParameter('number'));
-		$this->assertEquals('foo', $ctx->getRequest()->getRequestData()->getParameter('string'));
-		$this->assertEquals('MatchedMultipleParams', $container->getActionName());
-		$this->assertEquals('TestWithParam', $container->getModuleName());
-	}
-	
-	public function testOnNotMatched()
-	{
-		$this->routing->setInput('/callbacks/on_not_matched/callback_stopper');
-		try {
-			$container = $this->routing->execute();
-		} catch (AgaviException $e) {
-			$this->assertEquals('Not Matched', $e->getMessage());
-		}
-	}
-	
-	public function testNonMatchingCallback()
-	{
-		$this->routing->setInput('/callbacks/nonmatching_callback');
-		$container = $this->routing->execute();
-		$this->assertEquals(array('callbacks'), AgaviContext::getInstance(null)->getRequest()->getAttribute('matched_routes', 'org.agavi.routing'));
-		$this->assertEquals(AgaviConfig::get('actions.error_404_module'), $container->getModuleName());
-		$this->assertEquals(AgaviConfig::get('actions.error_404_action'), $container->getActionName());
-	}
-	
-	public function testMatchingCallback()
-	{
-		$ctx = AgaviContext::getInstance(null);
-		$this->routing->setInput('/callbacks/matching_callback');
-		$container = $this->routing->execute();
-		$this->assertEquals(array('callbacks', 'callbacks.matching_callback'), $ctx->getRequest()->getAttribute('matched_routes', 'org.agavi.routing'));
-		$this->assertEquals('Callback', $container->getModuleName());
-		$this->assertEquals('Matching', $container->getActionName());
-		$this->assertEquals('set', $ctx->getRequest()->getRequestData()->getParameter('callback'));
-	}
-	
-	public function testOnNotMatchedStopper()
-	{
-		$this->routing->setInput('/callbacks/stopper');
-		try {
-			$container = $this->routing->execute();
-		} catch (AgaviException $e) {
-			$this->fail('The onNotMatched callback of the childroute should not get called');
-		}
-	}
-	
-	/**
-	 * @dataProvider dataParseRouteString
-	 */
-	public function testParseRouteString($routeString, $expected)
-	{
-		$parsed = $this->routing->parseRouteString($routeString);
-		$this->assertEquals($expected, $parsed);
-	}
-	
-	public function dataParseRouteString()
-	{
-		return array(
-			'escaped_balanced' => array(
-				'static\(text(prefix{foo:1\(2\{3\}4\)5}postfix)',
-				array(
-					'#static\(text(prefix(?P<foo>1(2{3}4)5)postfix)#',
-					'static(text(:foo:)',
-					array('foo' => array(
-						'pre'  => 'prefix',
-						'val'  => '',
-						'post' => 'postfix',
-						'is_optional' => false,
-					)),
-					0,
-				)
-			),
-			'#789' => array(
-				'#static#with#quote',
-				array(
-					'#\#static\#with\#quote#',
-					'#static#with#quote',
-					array(),
-					0,
-				)
-			),
-		);
-	}
-	
-	public function testTicket263()
-	{
-		try {
-			$this->routing->addRoute('rxp', array('name' => 'foo'));
-			$this->routing->addRoute('rxp', array('name' => 'foo'), 'foo');
-			$this->fail('succeeded in adding a route with the same name as a child');
-		} catch (AgaviException $e) {
-			$this->assertEquals('You are trying to overwrite a route but are not staying in the same hierarchy', $e->getMessage());
-		}
-		
-	}
-	
-	public function testTicket764()
-	{
-		$this->routing->setInput('/test_ticket_764/dummy/child');
-		$container = $this->routing->execute();
-		$this->assertEquals('Default', $container->getModuleName());
-		$this->assertEquals('Foo/Bar', $container->getActionName());
-	}
-	
-	public function testEmptyDefaultValue() {
-		$this->routing->setInput('/empty_default_value');
-		$container = $this->routing->execute();
-		$rd = AgaviContext::getInstance(null)->getRequest()->getRequestData();
-		$this->assertSame('0', $rd->getParameter('value'));
-	}
+    // Matching Scenarios --------------------------------------------------
+
+    public function testMatchSimpleStaticRoute()
+    {
+        $routing = $this->makeRouting([
+            'home' => ['pattern' => '/home', 'defaults' => ['module' => 'Main', 'action' => 'Index']]
+        ]);
+        $m = $routing->match('/home');
+        $this->assertSame('Main', $m['module']);
+        $this->assertSame('Index', $m['action']);
+    }
+    public function testMatchRouteWithDefaults()
+    {
+        $routing = $this->makeRouting([
+            'user_show' => ['pattern' => '/user/{id}', 'defaults' => ['module' => 'User', 'action' => 'Show', 'id' => 42]]
+        ]);
+        $m = $routing->match('/user/42');
+        $this->assertSame('42', (string)$m['id']);
+        $this->assertSame('User', $m['module']);
+        // When explicit value matches default ensure still present
+        $this->assertSame('Show', $m['action']);
+    }
+    public function testMatchOptionalTrailingPlaceholderOmitted()
+    {
+        // In current implementation placeholders without provided param become empty string on generation;
+        // For matching, Symfony Route requires the segment. Simulate optional by adding default and pattern without requirement.
+        $routing = $this->makeRouting([
+            'login' => ['pattern' => '/login/{type}', 'defaults' => ['module' => 'Auth', 'action' => 'Login', 'type' => '']] // default makes it optional-ish
+        ]);
+        // Matching '/login/' might normalize differently; ensure '/login' matches and id default filled.
+        $m = $routing->match('/login');
+        $this->assertSame('', $m['type']);
+    }
+    public function testMatchOptionalTrailingPlaceholderPresent()
+    {
+        $routing = $this->makeRouting([
+            'login' => ['pattern' => '/login/{type}', 'defaults' => ['module' => 'Auth', 'action' => 'Login', 'type' => '']] 
+        ]);
+        $m = $routing->match('/login/basic');
+        $this->assertSame('basic', $m['type']);
+    }
+    public function testMatchWildcardLikePatternSpecificityOrdering()
+    {
+        // Add two patterns that could both match; verify the matcher returns the first registered (our simple routing add order)
+        $routing = $this->makeRouting([
+            'specific' => ['pattern' => '/item/123', 'defaults' => ['module' => 'Item', 'action' => 'Show', 'id' => 123]],
+            'generic' => ['pattern' => '/item/{id}', 'defaults' => ['module' => 'Item', 'action' => 'Show']]
+        ]);
+        $m = $routing->match('/item/123');
+        // Symfony's RouteCollection resolves by definition order; ensure we got explicit default id 123
+        $this->assertSame(123, $m['id']);
+    }
+
+    // Generation Scenarios ------------------------------------------------
+    public function testGenerateSimple()
+    {
+        $routing = $this->makeRouting([
+            'user_show' => ['pattern' => '/user/{id}', 'defaults' => ['module' => 'User', 'action' => 'Show', 'id' => 99]],
+        ]);
+        $url = $routing->gen('user_show', ['id' => 123]);
+        $this->assertSame('/user/123', $url);
+    }
+    public function testGenerateWithDefaultsMerged()
+    {
+        $routing = $this->makeRouting([
+            'user_show' => ['pattern' => '/user/{id}/{tab}', 'defaults' => ['module' => 'User', 'action' => 'Show', 'id' => 42, 'tab' => 'profile']],
+        ]);
+        // Provide only id; tab should come from defaults
+        $url = $routing->gen('user_show', ['id' => 42]);
+        $this->assertSame('/user/42/profile', $url);
+    }
+    public function testGenerateOptionalElidedWhenMissing()
+    {
+        $routing = $this->makeRouting([
+            'login' => ['pattern' => '/login/{type}', 'defaults' => ['module' => 'Auth', 'action' => 'Login', 'type' => '']],
+        ]);
+        $url = $routing->gen('login', []);
+        $this->assertSame('/login', $url);
+    }
+    public function testGenerateOptionalProvided()
+    {
+        $routing = $this->makeRouting([
+            'login' => ['pattern' => '/login/{type}', 'defaults' => ['module' => 'Auth', 'action' => 'Login', 'type' => '']],
+        ]);
+        $url = $routing->gen('login', ['type' => 'basic']);
+        $this->assertSame('/login/basic', $url);
+    }
+    public function testGenerateOmitDefaultsOptionPrunesRightmostSegments()
+    {
+        $routing = $this->makeRouting([
+            'lang_page' => ['pattern' => '/lang/{lang}/{page}', 'defaults' => ['module' => 'Cms', 'action' => 'Index', 'lang' => 'en', 'page' => 'index']],
+        ]);
+        $full = $routing->gen('lang_page');
+        $this->assertSame('/lang/en/index', $full);
+        $pruned = $routing->gen('lang_page', [], ['omit_defaults' => true]);
+        $this->assertSame('/lang', $pruned);
+    }
+    public function testGenerateNullRouteSelfWithParams()
+    {
+        $routing = $this->makeRouting([]);
+        // Set current script and input path
+        $prevScript = $_SERVER['SCRIPT_NAME'] ?? null;
+        $_SERVER['SCRIPT_NAME'] = '/index.php';
+        // Reflectively set input path
+        $ref = new ReflectionClass($routing);
+        $prop = $ref->getProperty('input');
+        // $prop->setAccessible(true); // Deprecated, not needed in PHP 8.1+
+        $prop->setValue($routing, '/current/path');
+        $url = $routing->gen(null, ['q' => 'value']);
+        $this->assertSame('/index.php/current/path?q=value', $url);
+        if ($prevScript === null) { unset($_SERVER['SCRIPT_NAME']); } else { $_SERVER['SCRIPT_NAME'] = $prevScript; }
+    }
+    public function testGeneratePercentEncodingAndUnescapedOptions()
+    {
+        $routing = $this->makeRouting([
+            'file_show' => ['pattern' => '/file/{name}', 'defaults' => ['module' => 'Fs', 'action' => 'Show']],
+        ]);
+        $url = $routing->gen('file_show', ['name' => 'spaced name']);
+        $this->assertSame('/file/spaced%20name', $url, 'rawurlencode should be applied');
+    }
+
+    // Hierarchy -----------------------------------------------------------
+    public function testAddRouteHierarchyConcatenation()
+    {
+        $routing = $this->makeRouting([]);
+        $routing->addRoute('/api', ['name' => 'api_root', 'module' => 'Api', 'action' => 'Root']);
+        $routing->addRoute('v1/users', ['name' => 'users', 'module' => 'Api', 'action' => 'Users'], 'api_root');
+        $child = $routing->getRoute('users');
+        $this->assertNotNull($child);
+        $this->assertSame('/api/v1/users', $child['pattern']);
+        $this->assertSame('api_root', $child['opt']['parent']);
+    }
+    public function testAddRouteDuplicateNameSameParentAllowed()
+    {
+        $routing = $this->makeRouting([]);
+        $routing->addRoute('/foo/one', ['name' => 'dup', 'module' => 'M', 'action' => 'A']);
+        // Overwrite with same parent (null) should succeed
+        $routing->addRoute('/foo/two', ['name' => 'dup', 'module' => 'M', 'action' => 'A']);
+        $r = $routing->getRoute('dup');
+        $this->assertSame('/foo/two', $r['pattern']);
+    }
+    public function testAddRouteDuplicateNameDifferentParentThrows()
+    {
+        $routing = $this->makeRouting([]);
+        $routing->addRoute('/p1', ['name' => 'p1', 'module' => 'M', 'action' => 'A']);
+        $routing->addRoute('/p2', ['name' => 'p2', 'module' => 'M', 'action' => 'A']);
+        $routing->addRoute('child', ['name' => 'child', 'module' => 'M', 'action' => 'A'], 'p1');
+        $this->expectException(Agavi\Exception\AgaviException::class);
+        $routing->addRoute('child', ['name' => 'child', 'module' => 'M', 'action' => 'A'], 'p2');
+    }
+
+
+    // Negative Cases ------------------------------------------------------
+    public function testGenerateUnknownRouteThrows()
+    {
+        $routing = $this->makeRouting([]);
+        $this->expectException(InvalidArgumentException::class);
+        $routing->gen('nope');
+    }
+    public function testGenerateMissingRequiredParamFallsBackEmpty()
+    {
+        $routing = $this->makeRouting([
+            'user_show' => ['pattern' => '/user/{id}', 'defaults' => ['module' => 'User', 'action' => 'Show']],
+        ]);
+        $url = $routing->gen('user_show');
+        // Placeholder removed -> /user
+        $this->assertSame('/user', $url);
+    }
+    public function testMatchUnmatchedPathThrows()
+    {
+        $routing = $this->makeRouting([
+            'home' => ['pattern' => '/home', 'defaults' => ['module' => 'Main', 'action' => 'Index']],
+        ]);
+        $this->expectException(ResourceNotFoundException::class);
+        $routing->match('/absent');
+    }
+
+    // Constraints (if supported) -----------------------------------------
+    public function testConstraintsMethodHostSchemeNotSupported()
+    {
+        $routing = $this->makeRouting([
+            'home' => ['pattern' => '/home', 'defaults' => ['module' => 'Main', 'action' => 'Index']],
+        ]);
+        $rc = $routing->getRouteCollection();
+        $r = $rc->get('home');
+        // Symfony Route would expose host/schemes/methods if configured; they are not.
+        $this->assertSame([], $r->getMethods());
+        $this->assertSame('', $r->getHost());
+        $this->assertSame([], $r->getSchemes());
+    }
 }
-
-
-?>

@@ -1,9 +1,12 @@
-<?php 
+<?php
+
+use Agavi\Testing\AgaviViewTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class Products_Product_ViewSuccessViewTest extends AgaviViewTestCase
 {
 
-	public function __construct($name = NULL, array $data = array(), $dataName = '')
+	public function __construct($name = NULL, array $data = [], $dataName = '')
 	{
 		parent::__construct($name, $data, $dataName);
 		// FIXME: the underlying issue must be solved
@@ -11,35 +14,33 @@ class Products_Product_ViewSuccessViewTest extends AgaviViewTestCase
 		$this->moduleName = 'Products';
 		$this->viewName   = 'Success';
 	}
-	
-	/**
-	 * @dataProvider supportedOtProvider
-	 */
+
+	#[DataProvider('supportedOtProvider')]
 	public function testHandlesOutputType($ot_name)
 	{
 		$this->assertHandlesOutputType($ot_name);
 	}
-	
-	public function supportedOtProvider()
+
+	public static function supportedOtProvider()
 	{
-		return array(
-			'html'   => array('html'),
-			'html'   => array('text'),
+		return [
+			'html'   => ['html'],
+			'html'   => ['text'],
 			// 'json'   => array('json'),
-			'soap'   => array('soap'),
-			'xmlrpc' => array('xmlrpc'),
-		);
+			'soap'   => ['soap'],
+			'xmlrpc' => ['xmlrpc'],
+		];
 	}
-	
+
 	public function testNotHandlesXmlOutputType()
 	{
 		$this->assertNotHandlesOutputType('xml');
 	}
-	
+
 	// FIXME: needs to be updated
 	public function testResponseHtml()
 	{		
-		$this->setArguments($this->createRequestDataHolder(array(AgaviWebRequestDataHolder::SOURCE_PARAMETERS => array('product_name' => 'spam'))));
+		$this->setArguments(['product_name' => 'spam']);
 
 		$this->setAttribute('product_id', 1234);
 		$this->setAttribute('product_name', 'spam');
@@ -52,10 +53,10 @@ class Products_Product_ViewSuccessViewTest extends AgaviViewTestCase
 		$this->assertViewRedirectsNot();
 		$this->assertContainerAttributeExists('_title');
 	}
-	
+
 	// public function testResponseJson()
 	// {		
-	// 	$this->setArguments($this->createRequestDataHolder(array(AgaviWebRequestDataHolder::SOURCE_PARAMETERS => array('product_name' => 'spam'))));
+	// Legacy form removed; using direct array above.
 	// 
 	// 	$this->setAttribute('product_id', 1234);
 	// 	$this->setAttribute('product_name', 'spam');

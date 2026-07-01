@@ -1,5 +1,8 @@
 <?php
 
+use Agavi\Exception\AgaviException;
+use Agavi\Routing\AgaviRoutingCallback;
+
 class TestTicket695RoutingCallback extends AgaviRoutingCallback
 {
 	/**
@@ -15,7 +18,8 @@ class TestTicket695RoutingCallback extends AgaviRoutingCallback
 	 * @author     Dominik del Bondio <ddb@bitxtender.com>
 	 * @since      0.11.0
 	 */
-	public function onGenerate(array $defaultParameters, array &$userParameters, array &$userOptions)
+	#[\Override]
+    public function onGenerate(array $defaultParameters, array &$userParameters, array &$userOptions): never
 	{
 		throw new AgaviException('called');
 	}

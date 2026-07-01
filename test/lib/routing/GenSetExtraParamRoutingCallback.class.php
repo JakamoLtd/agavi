@@ -1,5 +1,7 @@
 <?php
 
+use Agavi\Routing\AgaviRoutingCallback;
+
 class GenSetExtraParamRoutingCallback extends AgaviRoutingCallback
 {
 	/**
@@ -15,7 +17,8 @@ class GenSetExtraParamRoutingCallback extends AgaviRoutingCallback
 	 * @author     Dominik del Bondio <ddb@bitxtender.com>
 	 * @since      0.11.0
 	 */
-	public function onGenerate(array $defaultParameters, array &$userParameters, array &$userOptions)
+	#[\Override]
+    public function onGenerate(array $defaultParameters, array &$userParameters, array &$userOptions)
 	{
 		$userParameters['id'] = 12345;
 		return true;

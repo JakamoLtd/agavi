@@ -1,25 +1,41 @@
 <?php
 
+use Agavi\Testing\AgaviUnitTestCase;
+use Agavi\View\AgaviView;
+use Agavi\Request\AgaviWebRequest;
+
 class SampleView extends AgaviView
 {
-	public function execute(AgaviRequestDataHolder $rd) {}
+	public function execute(AgaviWebRequest $rd) {}
 }
 
-class ViewTest extends AgaviUnitTestCase
+class AgaviViewTest extends AgaviUnitTestCase
 {
 	private 
 		$_v = null, 
 		$_r = null;
 
-	public function setUp()
+	#[\Override]
+    public function setUp(): void
 	{
 		$ctx = $this->getContext();
 		$ctx->initialize();
 		$request = $ctx->getRequest();
 
 		$this->_v = new SampleView();
-		$this->_v->initialize($ct = $ctx->getController()->createExecutionContainer('Test', 'Test'));
-		$this->_r = $ct->getResponse();
+		$controller = $ctx->getController();
+		$descriptor = new \Agavi\Execution\ActionDescriptor('Test','Test','GET','html', false);
+		$init = new \Agavi\Execution\LightweightActionInitContext(
+			$ctx,
+			$descriptor->module,
+			$descriptor->action,
+			$descriptor->method,
+			$descriptor->outputType,
+			new AgaviWebRequest(),
+			$controller->getGlobalResponse()
+		);
+		$this->_v->initialize($init);
+		$this->_r = $controller->getGlobalResponse();
 	}
 
 	public function testInitialize()
