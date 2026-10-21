@@ -290,7 +290,8 @@ class AgaviGettextTranslator extends AgaviBasicTranslator
 				}
 				$funcCode .= ';';
 				$funcCode = 'return ' . str_replace('n', '$n', $funcCode);
-				$this->pluralFormFunc = create_function('$n', $funcCode);
+				// $funcCode was validated against a whitelist of characters above
+				eval('$this->pluralFormFunc = function($n) { ' . $funcCode . ' };');
 			}
 		}
 

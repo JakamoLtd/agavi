@@ -116,8 +116,19 @@ class AgaviTimeZoneDataParser
 		$zones = array();
 		$rules = array();
 		$links = array();
-		while(list($i, $line) = each($zoneLines)) { // for($i = 0, $c = count($zoneLines); $i < $c; ++$i) {
-			$line = $zoneLines[$i];
+		$i = $line = null;
+		reset($zoneLines);
+		// replacement for each(), which is deprecated as of PHP 7.2
+		$nextLine = function() use(&$zoneLines, &$i, &$line) {
+			$i = key($zoneLines);
+			if($i === null) {
+				return false;
+			}
+			$line = current($zoneLines);
+			next($zoneLines);
+			return true;
+		};
+		while($nextLine()) {
 
 			if(preg_match('!^\s*Rule\s*(.*)!', $line, $match)) {
 				$cols = $this->splitLine($match[1], 9);
@@ -128,11 +139,11 @@ class AgaviTimeZoneDataParser
 				$lineCols = $this->splitLine($match[1], 5);
 				$colLines[] = $lineCols;
 				// the until column exists so we need to fetch the continuation line
-				if(isset($lineCols[4]) && list($i, $line) = each($zoneLines)) {
+				if(isset($lineCols[4]) && $nextLine()) {
 					do {
 						$lineCols = $this->splitLine($line, 4);
 						$colLines[] = $lineCols;
-					} while(isset($lineCols[3]) && list($i, $line) = each($zoneLines));
+					} while(isset($lineCols[3]) && $nextLine());
 				}
 
 				$zone = $this->parseZone($colLines);
