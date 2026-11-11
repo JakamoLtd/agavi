@@ -228,6 +228,8 @@ final class AgaviArrayPathDefinition
 	 */
 	public static function getPartsFromPath($path)
 	{
+		// numeric array keys (e.g. from wildcard validator bases) arrive as int
+		$path = (string)$path;
 		if(strlen($path) == 0) {
 			return array('parts' => array(), 'absolute' => true);
 		}

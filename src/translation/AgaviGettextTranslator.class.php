@@ -290,7 +290,8 @@ class AgaviGettextTranslator extends AgaviBasicTranslator
 				}
 				$funcCode .= ';';
 				$funcCode = 'return ' . str_replace('n', '$n', $funcCode);
-				$this->pluralFormFunc = create_function('$n', $funcCode);
+				// create_function() was removed in PHP 8; it used eval() internally too
+				$this->pluralFormFunc = eval('return function($n) { ' . $funcCode . ' };');
 			}
 		}
 
