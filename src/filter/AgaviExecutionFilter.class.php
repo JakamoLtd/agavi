@@ -164,11 +164,17 @@ class AgaviExecutionFilter extends AgaviFilter implements AgaviIActionFilter
 		}
 		$filename = AgaviConfig::get('core.cache_dir') . DIRECTORY_SEPARATOR . self::CACHE_SUBDIR . DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, $groups) . '.cefcache';
 		$data = @file_get_contents($filename);
-		if($data !== false) {
-			return unserialize($data);
-		} else {
+		if($data === false) {
 			throw new AgaviException(sprintf('Failed to read cache file "%s"', $filename));
 		}
+		// The cache is written without the reader waiting for it: a request can
+		// read the file while another one rewrites it, and then gets an empty or
+		// partial file. The callers treat the exception as a cache miss.
+		$cache = @unserialize($data);
+		if(!is_array($cache)) {
+			throw new AgaviException(sprintf('Failed to unserialize cache file "%s"', $filename));
+		}
+		return $cache;
 	}
 
 	/**
